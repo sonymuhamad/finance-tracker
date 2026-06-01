@@ -1,0 +1,124 @@
+// Prisma schema — finance-tracker
+// Docs: https://pris.ly/d/prisma-schema
+//
+// Layering note: this schema is the single source of truth for the data model.
+// Every feature that touches it MUST be reflected in its RFC (docs/rfc/*).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7: the connection URL lives in prisma.config.ts (CLI) and is passed
+  // to PrismaClient via a driver adapter at runtime (see src/lib/prisma.ts).
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auth.js (NextAuth v5) models — standard Prisma adapter schema.
+// Sessions are JWT-based at runtime (Credentials dev-login needs JWT),
+// but the adapter still persists users & linked OAuth accounts.
+// ─────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts     Account[]
+  sessions     Session[]
+  categories   Category[]
+  transactions Transaction[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Domain — MVP (v0.1): transaction recording + categories.
+// Multi-wallet (Phase 1) and recurring/budget (Phase 2) are NOT here yet,
+// and will be added via their own RFC + migration.
+// ─────────────────────────────────────────────────────────────
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model Category {
+  id        String          @id @default(cuid())
+  userId    String
+  name      String
+  type      TransactionType
+  color     String?
+  icon      String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  // A user can't have two categories with the same name + type.
+  @@unique([userId, name, type])
+  @@index([userId])
+}
+
+model Transaction {
+  id         String          @id @default(cuid())
+  userId     String
+  categoryId String
+  type       TransactionType
+  // Money is stored as a fixed-precision decimal (never a float).
+  amount     Decimal         @db.Decimal(18, 2)
+  occurredAt DateTime
+  note       String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([userId, occurredAt])
+  @@index([categoryId])
+}
