@@ -1,12 +1,12 @@
 ---
 id: "001"
 title: Record transactions
-status: Draft
+status: Implemented
 phase: MVP
 owner: PM
 created: 2026-06-01
 last_updated: 2026-06-01
-rfc:
+rfc: ../../rfc/0001-record-transaction.md
 ---
 
 # 001 — Record transactions

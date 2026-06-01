@@ -1,12 +1,12 @@
 ---
 id: "002"
 title: Categories
-status: Draft
+status: Implemented
 phase: MVP
 owner: PM
 created: 2026-06-01
 last_updated: 2026-06-01
-rfc:
+rfc: ../../rfc/0002-categories.md
 ---
 
 # 002 — Categories

@@ -1,12 +1,12 @@
 ---
 id: "003"
 title: Dashboard / monthly summary
-status: Draft
+status: Implemented
 phase: MVP
 owner: PM
 created: 2026-06-01
 last_updated: 2026-06-01
-rfc:
+rfc: ../../rfc/0003-dashboard-summary.md
 ---
 
 # 003 — Dashboard / monthly summary

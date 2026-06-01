@@ -1,12 +1,12 @@
 ---
 id: "004"
 title: Auth foundation (Google OAuth + dev-login)
-status: Draft
+status: Implemented
 phase: MVP
 owner: PM
 created: 2026-06-01
 last_updated: 2026-06-01
-rfc:
+rfc: ../../rfc/0004-auth-foundation.md
 ---
 
 # 004 — Auth foundation

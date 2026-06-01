@@ -16,10 +16,10 @@ phone-friendly — without the friction of a spreadsheet._
 
 | # | Feature | PRD | Status |
 |---|---|---|---|
-| — | Auth foundation (Google OAuth + dev-login) | `prd/mvp/004-auth-foundation.md` | ◻ |
-| a | Record transactions (income & expense) | `prd/mvp/001-record-transaction.md` | ◻ |
-| b | Categories | `prd/mvp/002-categories.md` | ◻ |
-| e | Dashboard / monthly summary | `prd/mvp/003-dashboard-summary.md` | ◻ |
+| — | Auth foundation (Google OAuth + dev-login) | `prd/mvp/004-auth-foundation.md` | ✅ |
+| a | Record transactions (income & expense) | `prd/mvp/001-record-transaction.md` | ✅ |
+| b | Categories | `prd/mvp/002-categories.md` | ✅ |
+| e | Dashboard / monthly summary | `prd/mvp/003-dashboard-summary.md` | ✅ |
 
 **Done when:** Sony can log a transaction on his phone in seconds and see where
 the month's money went — replacing his spreadsheet for daily use.
