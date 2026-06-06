@@ -47,7 +47,7 @@ This handover and the new MVP PRDs reflect the pivot.
   once the feature RFCs consume it). `/simplify` + `/code-review` have been run and
   their fixes applied.
 
-### What's built (branch `feat/mvp-v0.1`, all **uncommitted**)
+### What's built (branch `feat/mvp-v0.1`, committed as `3871b24`, not merged)
 
 - `prisma/schema.prisma` rebuilt: enums + `Wallet`/`Card`/`RecurringRule`/`Movement`,
   `Category.type`→`MovementType`, `Transaction` dropped. Two migrations:
@@ -91,8 +91,9 @@ in order — each: PRD already Approved → write RFC → TDD implement → sync
    "perlu konfirmasi". Replaces the placeholder home; honors the `CycleForecast`
    contract in `0005`.
 
-Then flip `0005` → `Implemented`. Also pending: **commit** the (uncommitted)
-planning docs + foundation once Sony's manual smoke-test passes.
+Then flip `0005` → `Implemented`. The foundation is **committed** (`3871b24`) but
+Sony **hasn't run the manual smoke-test yet** — verify the app still runs (login,
+categories CRUD, placeholder home, nav) when convenient; fix forward if anything broke.
 
 ## How to resume (local setup)
 
