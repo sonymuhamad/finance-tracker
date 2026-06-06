@@ -9,6 +9,11 @@
 export const DEFAULT_CURRENCY = "IDR";
 export const DEFAULT_LOCALE = "id-ID";
 
+/** Round a major-unit amount to 2 decimal places (the money rounding policy). */
+export function roundMoney(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
 /** Format a numeric amount as a localized currency string. */
 export function formatCurrency(
   amount: number,
@@ -34,5 +39,5 @@ export function parseAmount(input: string): number | null {
   if (!/^-?\d*\.?\d+$/.test(normalized)) return null;
   const value = Number(normalized);
   if (!Number.isFinite(value) || value < 0) return null;
-  return Math.round(value * 100) / 100;
+  return roundMoney(value);
 }

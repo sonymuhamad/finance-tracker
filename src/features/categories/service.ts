@@ -47,10 +47,11 @@ export async function deleteCategory(userId: string, id: string) {
     const res = await repo.remove(id, userId);
     if (res.count === 0) throw new DomainError("Kategori tidak ditemukan.");
   } catch (error) {
-    // onDelete: Restrict — the category is still referenced by a transaction.
+    // onDelete: Restrict — the category is still used by a movement or a
+    // recurring rule, so it can't be deleted (history stays intact).
     if (prismaErrorCode(error) === "P2003") {
       throw new DomainError(
-        "Kategori masih dipakai transaksi, jadi tidak bisa dihapus.",
+        "Kategori masih dipakai pencatatan, jadi tidak bisa dihapus.",
       );
     }
     throw error;

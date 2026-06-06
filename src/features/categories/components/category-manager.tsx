@@ -23,14 +23,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TransactionType } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 import {
   createCategoryAction,
   deleteCategoryAction,
   updateCategoryAction,
 } from "../actions";
-import { type CreateCategoryInput, createCategorySchema } from "../schema";
+import {
+  type CategoryType,
+  type CreateCategoryInput,
+  createCategorySchema,
+} from "../schema";
 import type { CategoryDTO } from "../types";
 
 const SWATCHES = [
@@ -46,7 +49,7 @@ const SWATCHES = [
   "#a8a29e",
 ];
 
-const TYPE_LABEL: Record<TransactionType, string> = {
+const TYPE_LABEL: Record<CategoryType, string> = {
   INCOME: "Pemasukan",
   EXPENSE: "Pengeluaran",
 };
@@ -60,7 +63,7 @@ export function CategoryManager({ initial }: { initial: CategoryDTO[] }) {
     resolver: zodResolver(createCategorySchema),
     defaultValues: {
       name: "",
-      type: TransactionType.EXPENSE,
+      type: "EXPENSE",
       color: SWATCHES[0],
       icon: "",
     },
@@ -70,7 +73,7 @@ export function CategoryManager({ initial }: { initial: CategoryDTO[] }) {
     setEditing(null);
     form.reset({
       name: "",
-      type: TransactionType.EXPENSE,
+      type: "EXPENSE",
       color: SWATCHES[0],
       icon: "",
     });
@@ -118,7 +121,7 @@ export function CategoryManager({ initial }: { initial: CategoryDTO[] }) {
     });
   }
 
-  const groups = [TransactionType.EXPENSE, TransactionType.INCOME] as const;
+  const groups = ["EXPENSE", "INCOME"] as const;
 
   return (
     <div className="space-y-6">
@@ -211,20 +214,14 @@ export function CategoryManager({ initial }: { initial: CategoryDTO[] }) {
               <Label>Tipe</Label>
               <Select
                 value={form.watch("type")}
-                onValueChange={(v) =>
-                  form.setValue("type", v as TransactionType)
-                }
+                onValueChange={(v) => form.setValue("type", v as CategoryType)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={TransactionType.EXPENSE}>
-                    Pengeluaran
-                  </SelectItem>
-                  <SelectItem value={TransactionType.INCOME}>
-                    Pemasukan
-                  </SelectItem>
+                  <SelectItem value={"EXPENSE"}>Pengeluaran</SelectItem>
+                  <SelectItem value={"INCOME"}>Pemasukan</SelectItem>
                 </SelectContent>
               </Select>
             </div>

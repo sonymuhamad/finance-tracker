@@ -1,10 +1,15 @@
 import { z } from "zod";
-import { TransactionType } from "@/generated/prisma/enums";
+import { MovementType } from "@/generated/prisma/enums";
 
 export const categoryTypeSchema = z.enum([
-  TransactionType.INCOME,
-  TransactionType.EXPENSE,
+  MovementType.INCOME,
+  MovementType.EXPENSE,
 ]);
+
+// Categories only ever cover income/expense — never ADJUSTMENT. This narrowed
+// type keeps ADJUSTMENT out of the categories domain (the DB column is the wider
+// MovementType; this Zod enum is what enforces the narrowing at the action edge).
+export type CategoryType = z.infer<typeof categoryTypeSchema>;
 
 export const createCategorySchema = z.object({
   name: z

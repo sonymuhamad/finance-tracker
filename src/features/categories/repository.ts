@@ -1,10 +1,10 @@
-import type { TransactionType } from "@/generated/prisma/enums";
+import type { MovementType } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import type { DefaultCategory } from "./defaults";
 
 type CategoryData = {
   name: string;
-  type: TransactionType;
+  type: MovementType;
   color?: string;
   icon?: string;
 };

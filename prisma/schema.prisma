@@ -30,10 +30,13 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts     Account[]
-  sessions     Session[]
-  categories   Category[]
-  transactions Transaction[]
+  accounts       Account[]
+  sessions       Session[]
+  categories     Category[]
+  wallets        Wallet[]
+  cards          Card[]
+  recurringRules RecurringRule[]
+  movements      Movement[]
 }
 
 model Account {
@@ -76,49 +79,167 @@ model VerificationToken {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Domain — MVP (v0.1): transaction recording + categories.
-// Multi-wallet (Phase 1) and recurring/budget (Phase 2) are NOT here yet,
-// and will be added via their own RFC + migration.
+// Domain — MVP (v0.1): cash-flow forecaster (RFC 0005).
+//
+// The spine is a single unified `Movement` primitive on top of payday cycles.
+// See docs/rfc/0005-movement-and-cycle-foundation.md (source of truth for the
+// model). Keep this schema and that RFC in sync.
 // ─────────────────────────────────────────────────────────────
 
-enum TransactionType {
+enum MovementType {
   INCOME
   EXPENSE
+  ADJUSTMENT // manual balance correction (005); categoryId is null
 }
 
+enum MovementStatus {
+  PLANNED // committed-but-unpaid: expected income, obligation due later
+  ACTUAL // money has moved; affects wallet balance
+}
+
+enum PaymentMethod {
+  CASH // hits the wallet now
+  CREDIT_CARD // obligation, due later
+  PAYLATER // obligation, due later
+}
+
+enum WalletType {
+  CASH
+  BANK
+  EWALLET
+}
+
+enum CardKind {
+  CREDIT_CARD
+  PAYLATER
+}
+
+/// A wallet holds real money. Balances are *pooled* into one total (X).
+/// CC & paylater are NOT wallets — see Card.
+model Wallet {
+  id              String     @id @default(cuid())
+  userId          String
+  name            String
+  type            WalletType
+  // Money is stored as a fixed-precision decimal (never a float).
+  startingBalance Decimal    @default(0) @db.Decimal(18, 2)
+  isPrimary       Boolean    @default(false)
+  emoji           String?
+  color           String?
+  archivedAt      DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movements      Movement[]
+  cards          Card[]
+  recurringRules RecurringRule[]
+
+  @@index([userId])
+}
+
+/// A credit card or paylater instrument. Purchases on it become obligations
+/// that deduct the paying wallet on a due date (default inherited from here).
+model Card {
+  id             String    @id @default(cuid())
+  userId         String
+  name           String
+  kind           CardKind
+  defaultDueDay  Int // 1..31, clamps to month end
+  payingWalletId String
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payingWallet   Wallet          @relation(fields: [payingWalletId], references: [id], onDelete: Restrict)
+  movements      Movement[]
+  recurringRules RecurringRule[]
+
+  @@index([userId])
+}
+
+/// A monthly recurring rule (primary income, cicilan, SPP). Future occurrences
+/// are projected on read; a Movement is materialized only on confirm.
+model RecurringRule {
+  id              String       @id @default(cuid())
+  userId          String
+  type            MovementType // INCOME | EXPENSE (never ADJUSTMENT)
+  amount          Decimal      @db.Decimal(18, 2)
+  dayOfMonth      Int // 1..31, clamps for short months
+  walletId        String // income destination / expense paying wallet
+  cardId          String? // recurring obligation paid via a card
+  categoryId      String?
+  isPrimaryIncome Boolean      @default(false) // the ONE that anchors the cycle
+  note            String?
+  startsOn        DateTime // first cycle this rule applies
+  endedAt         DateTime? // edits/stops apply to the future only
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet    Wallet     @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  card      Card?      @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  // Restrict: a category in use can't be deleted (preserve history; see service).
+  category  Category?  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  movements Movement[] // materialized occurrences (on confirm)
+
+  @@index([userId])
+}
+
+/// A user-managed label for movements: expense categories and income tags.
+/// Constrained to INCOME | EXPENSE (validated at the action boundary via Zod).
 model Category {
-  id        String          @id @default(cuid())
+  id        String       @id @default(cuid())
   userId    String
   name      String
-  type      TransactionType
+  type      MovementType // INCOME | EXPENSE only (enforced in the service)
   color     String?
   icon      String?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movements      Movement[]
+  recurringRules RecurringRule[]
 
   // A user can't have two categories with the same name + type.
   @@unique([userId, name, type])
   @@index([userId])
 }
 
-model Transaction {
-  id         String          @id @default(cuid())
-  userId     String
-  categoryId String
-  type       TransactionType
-  // Money is stored as a fixed-precision decimal (never a float).
-  amount     Decimal         @db.Decimal(18, 2)
-  occurredAt DateTime
-  note       String?
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+/// The unified money-movement primitive: income, expense, obligation, or
+/// adjustment, discriminated by type + status. `effectiveDate` is the cycle axis.
+model Movement {
+  id              String         @id @default(cuid())
+  userId          String
+  type            MovementType
+  status          MovementStatus
+  // Positive for INCOME/EXPENSE (the type implies the sign); ADJUSTMENT carries
+  // a signed delta (a correction can raise or lower a balance).
+  amount          Decimal        @db.Decimal(18, 2)
+  walletId        String // income → destination; expense → paying wallet
+  cardId          String? // set for CC/paylater obligations
+  categoryId      String? // null for ADJUSTMENT
+  paymentMethod   PaymentMethod? // null for INCOME / ADJUSTMENT
+  occurredAt      DateTime // when the event happened (swipe/entry date)
+  effectiveDate   DateTime // when money actually moves → cycle assignment
+  note            String?
+  recurringRuleId String? // set if generated from a recurring rule
+  confirmedAt     DateTime? // set when PLANNED → ACTUAL
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet        Wallet         @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  card          Card?          @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  // Restrict: a category in use can't be deleted (preserve history; see service).
+  category      Category?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  recurringRule RecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
 
-  @@index([userId, occurredAt])
+  @@index([userId, effectiveDate])
+  @@index([walletId])
+  @@index([cardId])
   @@index([categoryId])
+  @@index([recurringRuleId])
 }

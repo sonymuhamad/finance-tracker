@@ -1,8 +1,8 @@
-import { TransactionType } from "@/generated/prisma/enums";
+import { MovementType } from "@/generated/prisma/enums";
 
 export type DefaultCategory = {
   name: string;
-  type: TransactionType;
+  type: MovementType;
   color: string;
   icon: string;
 };
@@ -11,51 +11,51 @@ export type DefaultCategory = {
 export const DEFAULT_CATEGORIES: DefaultCategory[] = [
   {
     name: "Makan",
-    type: TransactionType.EXPENSE,
+    type: MovementType.EXPENSE,
     color: "#f97362",
     icon: "🍜",
   },
   {
     name: "Transport",
-    type: TransactionType.EXPENSE,
+    type: MovementType.EXPENSE,
     color: "#f59e0b",
     icon: "🚗",
   },
   {
     name: "Belanja",
-    type: TransactionType.EXPENSE,
+    type: MovementType.EXPENSE,
     color: "#ec4899",
     icon: "🛍️",
   },
   {
     name: "Tagihan",
-    type: TransactionType.EXPENSE,
+    type: MovementType.EXPENSE,
     color: "#8b5cf6",
     icon: "🧾",
   },
   {
     name: "Hiburan",
-    type: TransactionType.EXPENSE,
+    type: MovementType.EXPENSE,
     color: "#14b8a6",
     icon: "🎬",
   },
   {
     name: "Kesehatan",
-    type: TransactionType.EXPENSE,
+    type: MovementType.EXPENSE,
     color: "#10b981",
     icon: "💊",
   },
   {
     name: "Lainnya",
-    type: TransactionType.EXPENSE,
+    type: MovementType.EXPENSE,
     color: "#a8a29e",
     icon: "📦",
   },
-  { name: "Gaji", type: TransactionType.INCOME, color: "#22c55e", icon: "💰" },
-  { name: "Bonus", type: TransactionType.INCOME, color: "#84cc16", icon: "🎁" },
+  { name: "Gaji", type: MovementType.INCOME, color: "#22c55e", icon: "💰" },
+  { name: "Bonus", type: MovementType.INCOME, color: "#84cc16", icon: "🎁" },
   {
     name: "Lainnya",
-    type: TransactionType.INCOME,
+    type: MovementType.INCOME,
     color: "#a8a29e",
     icon: "✨",
   },

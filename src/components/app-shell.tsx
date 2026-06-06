@@ -21,9 +21,10 @@ type ShellUser = {
   image?: string | null;
 };
 
+// Wallets / income / expenses routes arrive with the follow-on feature RFCs
+// (0006–0009). For now the foundation ships Beranda (placeholder) + Kategori.
 const NAV = [
   { href: "/", label: "Beranda", icon: LayoutGrid },
-  { href: "/transactions", label: "Transaksi", icon: Wallet },
   { href: "/categories", label: "Kategori", icon: Tags },
 ] as const;
 
