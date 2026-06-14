@@ -28,10 +28,8 @@
 .idea/
 .vscode/
 
-# Claude Code — ignore local config/artifacts (settings, transcripts, etc.),
-# but keep the project's persona skills (eng/pm/new-feature; see CLAUDE.md).
-.claude/*
-!.claude/skills/
+# Claude Code — local config, skills, and artifacts (not version-controlled)
+.claude/
 
 # debug
 npm-debug.log*
