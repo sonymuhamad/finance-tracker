@@ -40,6 +40,21 @@ export function findById(id: string, userId: string) {
   return prisma.movement.findFirst({ where: { id, userId } });
 }
 
+/**
+ * A movement already materialized from a recurring rule on a specific effective
+ * date — the idempotency guard against double-confirming a projected occurrence
+ * (RFC 0007/0008).
+ */
+export function findByRuleOnDate(
+  userId: string,
+  recurringRuleId: string,
+  effectiveDate: Date,
+) {
+  return prisma.movement.findFirst({
+    where: { userId, recurringRuleId, effectiveDate },
+  });
+}
+
 /** Flip a planned movement to actual. Scoped so a user only confirms their own. */
 export function confirm(
   id: string,
@@ -55,6 +70,22 @@ export function confirm(
     where: { id, userId, status: MovementStatus.PLANNED },
     data: { status: MovementStatus.ACTUAL, ...data },
   });
+}
+
+/** Edit a movement's mutable fields, scoped so a user only edits their own. */
+export function update(
+  id: string,
+  userId: string,
+  data: {
+    amount?: number;
+    categoryId?: string | null;
+    note?: string | null;
+    effectiveDate?: Date;
+    status?: MovementStatus;
+    confirmedAt?: Date | null;
+  },
+) {
+  return prisma.movement.updateMany({ where: { id, userId }, data });
 }
 
 export function remove(id: string, userId: string) {

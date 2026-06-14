@@ -1,10 +1,15 @@
 import { prisma } from "@/lib/prisma";
-import type { RecurringRuleInput } from "./types";
+import type { RecurringRuleInput, RecurringRuleUpdate } from "./types";
 
 /** The ONLY layer that touches Prisma for recurring rules (RFC 0005). */
 
 export function create(data: RecurringRuleInput) {
   return prisma.recurringRule.create({ data });
+}
+
+/** Edit a rule's mutable fields, scoped by userId (RFC 0007). */
+export function update(id: string, userId: string, data: RecurringRuleUpdate) {
+  return prisma.recurringRule.updateMany({ where: { id, userId }, data });
 }
 
 /**

@@ -13,3 +13,13 @@ export type RecurringRuleInput = {
   note?: string | null;
   startsOn: Date;
 };
+
+/** Editable fields of a recurring rule (RFC 0007); edits apply going forward. */
+export type RecurringRuleUpdate = {
+  amount?: number;
+  dayOfMonth?: number;
+  walletId?: string;
+  cardId?: string | null;
+  categoryId?: string | null;
+  note?: string | null;
+};

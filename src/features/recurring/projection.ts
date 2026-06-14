@@ -7,6 +7,7 @@
  * item is never double-counted against its still-virtual projection.
  */
 
+import type { RecurringRule } from "@/generated/prisma/client";
 import type { MovementType } from "@/generated/prisma/enums";
 import { type Cycle, occurrenceDateInCycle, toCycleDate } from "@/lib/cycle";
 
@@ -18,9 +19,26 @@ export type ProjectionRule = {
   walletId: string;
   cardId: string | null;
   categoryId: string | null;
+  note: string | null;
   startsOn: Date;
   endedAt: Date | null;
 };
+
+/** Map a persisted rule to the shape this pure projection consumes. */
+export function toProjectionRule(rule: RecurringRule): ProjectionRule {
+  return {
+    id: rule.id,
+    type: rule.type,
+    amount: Number(rule.amount),
+    dayOfMonth: rule.dayOfMonth,
+    walletId: rule.walletId,
+    cardId: rule.cardId,
+    categoryId: rule.categoryId,
+    note: rule.note,
+    startsOn: rule.startsOn,
+    endedAt: rule.endedAt,
+  };
+}
 
 export type ProjectedOccurrence = {
   ruleId: string;
@@ -29,6 +47,7 @@ export type ProjectedOccurrence = {
   walletId: string;
   cardId: string | null;
   categoryId: string | null;
+  note: string | null; // the rule's note — same every cycle, shown to tell items apart
   effectiveDate: Date;
   cycleOffset: number;
 };
@@ -64,6 +83,7 @@ export function projectOccurrences(
       walletId: rule.walletId,
       cardId: rule.cardId,
       categoryId: rule.categoryId,
+      note: rule.note,
       effectiveDate,
       cycleOffset: cycle.offset,
     });

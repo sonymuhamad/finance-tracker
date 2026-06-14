@@ -1,3 +1,4 @@
+import type { MovementStatus } from "@/generated/prisma/enums";
 import * as repo from "./repository";
 import type { MovementInput } from "./types";
 
@@ -32,6 +33,22 @@ export function confirmMovement(
   overrides: { walletId?: string; amount?: number; effectiveDate?: Date } = {},
 ) {
   return repo.confirm(id, userId, { confirmedAt: new Date(), ...overrides });
+}
+
+/** Edit a movement's mutable fields (amount / category / date / note / status). */
+export function updateMovement(
+  id: string,
+  userId: string,
+  patch: {
+    amount?: number;
+    categoryId?: string | null;
+    note?: string | null;
+    effectiveDate?: Date;
+    status?: MovementStatus;
+    confirmedAt?: Date | null;
+  },
+) {
+  return repo.update(id, userId, patch);
 }
 
 export function deleteMovement(id: string, userId: string) {

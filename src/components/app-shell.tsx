@@ -1,6 +1,14 @@
 "use client";
 
-import { LayoutGrid, LogOut, Tags, Wallet } from "lucide-react";
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  LayoutGrid,
+  LogOut,
+  Tags,
+  Wallet,
+  WalletCards,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -21,10 +29,13 @@ type ShellUser = {
   image?: string | null;
 };
 
-// Wallets / income / expenses routes arrive with the follow-on feature RFCs
-// (0006–0009). For now the foundation ships Beranda (placeholder) + Kategori.
+// The real Beranda lands in 0009. Wallets (Dompet) shipped with 0006, Income
+// (Pemasukan) with 0007, Expenses (Pengeluaran) with 0008.
 const NAV = [
   { href: "/", label: "Beranda", icon: LayoutGrid },
+  { href: "/wallets", label: "Dompet", icon: WalletCards },
+  { href: "/income", label: "Pemasukan", icon: ArrowDownCircle },
+  { href: "/expenses", label: "Pengeluaran", icon: ArrowUpCircle },
   { href: "/categories", label: "Kategori", icon: Tags },
 ] as const;
 

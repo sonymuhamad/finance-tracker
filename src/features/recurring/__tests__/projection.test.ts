@@ -14,6 +14,7 @@ const rule = (
   walletId: "w1",
   cardId: null,
   categoryId: null,
+  note: null,
   startsOn: new Date("2026-01-01"),
   endedAt: null,
   ...over,
@@ -30,6 +31,15 @@ describe("projectOccurrences", () => {
     expect(occ[0].ruleId).toBe("r1");
     expect(iso(occ[0].effectiveDate)).toBe("2026-06-05");
     expect(occ[0].cycleOffset).toBe(0);
+  });
+
+  it("carries the rule's note onto the occurrence (to tell same-tag items apart)", () => {
+    const occ = projectOccurrences(
+      [rule({ id: "r1", dayOfMonth: 5, note: "Buat Bunda" })],
+      cycle,
+      new Set(),
+    );
+    expect(occ[0].note).toBe("Buat Bunda");
   });
 
   it("excludes a rule already materialized in this cycle (no double-count)", () => {

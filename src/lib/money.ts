@@ -20,12 +20,20 @@ export function formatCurrency(
   currency: string = DEFAULT_CURRENCY,
   locale: string = DEFAULT_LOCALE,
 ): string {
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-    // IDR conventionally shows no decimals.
-    maximumFractionDigits: currency === "IDR" ? 0 : 2,
-  }).format(amount);
+  return (
+    new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      // IDR conventionally shows no decimals.
+      maximumFractionDigits: currency === "IDR" ? 0 : 2,
+    })
+      .format(amount)
+      // ICU emits a non-breaking / narrow-no-break space between the symbol and
+      // the digits, and its codepoint differs across ICU versions (Node vs the
+      // browser) — which causes React hydration mismatches. Normalize to a plain
+      // space so server and client render byte-identical strings.
+      .replace(/[\u00A0\u202F]/g, " ")
+  );
 }
 
 /**

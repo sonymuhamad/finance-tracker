@@ -23,17 +23,22 @@ phone-friendly — without the friction of a spreadsheet._
 | # | Feature | Status |
 |---|---|---|
 | — | Auth foundation (Google OAuth + dev-login) | ✅ (salvaged from old v0.1) |
-| a | Wallets + pooled balance + set primary (no transfers yet) | ◻ |
-| b | Income — primary recurring (anchors cycle) + one-off + forward income (set future cycles) | ◻ |
-| c | Expenses & obligations with payment-method timing (cash now · CC/paylater on due date · recurring fixed e.g. cicilan/SPP) | ◻ |
-| d | Categories / tags (adapted from old v0.1) | ◻ |
-| e | Home — "X now → Y due this cycle → Z safe to spend" + per-wallet breakdown | ◻ |
-| f | Multi-cycle view — cycle switcher on the home to view/project the current → future cycles | ◻ |
+| a | Wallets + pooled balance + set primary (no transfers yet) | ✅ (RFC 0006) |
+| b | Income — primary recurring (anchors cycle) + one-off + forward income (set future cycles) | ✅ (RFC 0007) |
+| c | Expenses & obligations with payment-method timing (cash now · CC/paylater on due date · recurring fixed e.g. cicilan/SPP) | ✅ (RFC 0008) |
+| d | Categories / tags (adapted from old v0.1) | ✅ (income/expense tags) |
+| e | Home — "X now → Y due this cycle → Z safe to spend" + per-wallet breakdown | ✅ (RFC 0009) |
+| f | Multi-cycle view — cycle switcher on the home to view/project the current → future cycles | ✅ (RFC 0009) |
 
 **Done when:** Sony opens the app on his phone and instantly trusts the "safe to
 spend before next payday" number — because it already accounts for his cash, his
 upcoming credit-card bills, and his fixed obligations — and he can look ahead to
 future cycles.
+
+> **Status (2026-06-06): MVP feature-complete.** All of `a`–`f` implemented
+> (RFCs `0005`–`0009`), 125 tests green, type-check + lint + build clean, each
+> feature `/simplify` + `/code-review`'d. On branch `feat/mvp-v0.1`, **not yet
+> committed**; pending Sony's review + manual smoke-test, then commit/merge.
 
 ## Phase 1 — v0.2 — plan execution & richer recurring
 
@@ -69,4 +74,7 @@ future cycles.
 
 ## Backlog (unscheduled)
 
-- _(empty)_
+- **`/expenses` cycle spending summary + UX polish** — show the cycle's total
+  pengeluaran (and X→Y→Z mini-recap) on the expenses page so you don't bounce to
+  Beranda while recording; tidy the page's empty/bare layout. (Deferred 2026-06-14;
+  details in `docs/polish-backlog.md` #7/#8.)

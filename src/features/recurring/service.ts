@@ -1,7 +1,6 @@
-import type { RecurringRule } from "@/generated/prisma/client";
-import type { ProjectionRule } from "./projection";
+import { DomainError } from "@/lib/errors";
 import * as repo from "./repository";
-import type { RecurringRuleInput } from "./types";
+import type { RecurringRuleInput, RecurringRuleUpdate } from "./types";
 
 /**
  * Recurring rules (RFC 0005): the source of truth for monthly repeating items.
@@ -11,6 +10,7 @@ export {
   type ProjectedOccurrence,
   type ProjectionRule,
   projectOccurrences,
+  toProjectionRule,
 } from "./projection";
 
 /**
@@ -26,6 +26,16 @@ export function createRule(input: RecurringRuleInput) {
 
 export function setPrimaryIncome(userId: string, ruleId: string) {
   return repo.setPrimaryIncome(userId, ruleId);
+}
+
+/** Edit a rule in place (RFC 0007); changes apply to current + future cycles. */
+export async function updateRule(
+  id: string,
+  userId: string,
+  data: RecurringRuleUpdate,
+) {
+  const res = await repo.update(id, userId, data);
+  if (res.count === 0) throw new DomainError("Aturan tidak ditemukan.");
 }
 
 export function endRule(
@@ -47,19 +57,4 @@ export function listActiveRules(userId: string) {
 export async function getCycleAnchorDay(userId: string): Promise<number> {
   const primary = await repo.findPrimaryIncome(userId);
   return primary?.dayOfMonth ?? 1;
-}
-
-/** Map a persisted rule to the shape the pure projection consumes. */
-export function toProjectionRule(rule: RecurringRule): ProjectionRule {
-  return {
-    id: rule.id,
-    type: rule.type,
-    amount: Number(rule.amount),
-    dayOfMonth: rule.dayOfMonth,
-    walletId: rule.walletId,
-    cardId: rule.cardId,
-    categoryId: rule.categoryId,
-    startsOn: rule.startsOn,
-    endedAt: rule.endedAt,
-  };
 }

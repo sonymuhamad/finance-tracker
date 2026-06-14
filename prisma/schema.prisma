@@ -95,6 +95,7 @@ enum MovementType {
 enum MovementStatus {
   PLANNED // committed-but-unpaid: expected income, obligation due later
   ACTUAL // money has moved; affects wallet balance
+  SKIPPED // a recurring occurrence skipped for one cycle; suppresses its projection, never affects balance
 }
 
 enum PaymentMethod {

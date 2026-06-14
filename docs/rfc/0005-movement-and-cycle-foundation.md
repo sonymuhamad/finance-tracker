@@ -1,12 +1,12 @@
 ---
 id: "0005"
 title: "Foundation — Movement + Cycle model"
-status: In Progress # Draft → Approved → In Progress → Implemented
+status: Implemented # Draft → Approved → In Progress → Implemented
 prd: # docs/prd/mvp/005-wallets.md, 006-income-and-cycle.md, 007-expenses-and-obligations.md, 008-home-safe-to-spend.md
 author: Engineering
 created: 2026-06-06
 last_updated: 2026-06-06
-last_verified: 2026-06-06
+last_verified: 2026-06-14 # SKIPPED MovementStatus added (per-occurrence skip, RFC 0008)
 ---
 
 # RFC 0005 — Foundation: Movement + Cycle model
@@ -79,6 +79,7 @@ enum MovementType {
 enum MovementStatus {
   PLANNED             // committed-but-unpaid: expected income, obligation due later
   ACTUAL              // money has moved; affects wallet balance
+  SKIPPED             // a recurring occurrence skipped for one cycle (added in 0008); never affects balance
 }
 
 enum PaymentMethod {
@@ -236,7 +237,7 @@ unset the old primary before setting the new one):
 |---|---|
 | `Movement.walletId` | INCOME → destination wallet; EXPENSE/obligation → the **paying** wallet (where it leaves on `effectiveDate`); ADJUSTMENT → the corrected wallet. |
 | `Movement.effectiveDate` | The date money actually moves. **Cash** = `occurredAt`. **CC/paylater** = the due date (from the card / editable). Determines the cycle. |
-| `Movement.status` | `PLANNED` = expected/obligation (does **not** affect balance yet). `ACTUAL` = moved (affects balance). `confirmedAt` set on the flip. |
+| `Movement.status` | `PLANNED` = expected/obligation (does **not** affect balance yet). `ACTUAL` = moved (affects balance). `SKIPPED` = a recurring occurrence skipped for one cycle (added in `0008`; like PLANNED it never affects balance, and it's kept out of Y). `confirmedAt` set on the PLANNED→ACTUAL flip. |
 | `Movement.cardId` | Links a CC/paylater obligation to its card → home groups obligations per card. |
 | `RecurringRule.isPrimaryIncome` | The single rule whose `dayOfMonth` anchors the payday cycle. |
 
@@ -307,7 +308,9 @@ expenses), composing the primitives below.
   planned ignored); `resolveTiming(method, occurredAt, dueDate)` (cash → ACTUAL
   now / CC·paylater → PLANNED on due date); `adjustmentDelta(current, target)`.
 - `repository.ts` — Movement queries: `create`, `listActualByWallet`,
-  `listActualByUser`, `listByUserInWindow`, `findById`, `confirm`, `remove`.
+  `listActualByUser`, `listByUserInWindow`, `findById`, `confirm`, `remove`,
+  `findByRuleOnDate` (added in `0007`: confirm-idempotency guard — a movement
+  already materialized from a rule on a given effective date).
 - `service.ts` — primitives: `createMovement`, `confirmMovement` (flip PLANNED →
   ACTUAL, stamp `confirmedAt`, overridable wallet/amount/date), `deleteMovement`;
   re-exports the pure helpers. (Balances are derived, so edit/delete needs no
@@ -318,12 +321,13 @@ expenses), composing the primitives below.
   materializedRuleIds)`: virtual occurrences from active rules in a cycle,
   **excluding** any rule already materialized for that cycle (no double-count),
   honoring `startsOn` / `endedAt`.
-- `repository.ts` — `create`, `listActive`, `findById`, `findPrimaryIncome`,
-  `end`, `setPrimaryIncome` (atomic unset-then-set in a `$transaction`).
+- `repository.ts` — `create`, `update` (added in `0007`: edit a rule in place),
+  `listActive`, `findById`, `findPrimaryIncome`, `end`, `setPrimaryIncome`
+  (atomic unset-then-set in a `$transaction`).
 - `service.ts` — `createRule` (atomically makes a primary income the only one),
-  `setPrimaryIncome`, `endRule` (future-only), `listActiveRules`,
-  `getCycleAnchorDay` (primary income's day, else 1 → calendar months),
-  `toProjectionRule`; re-exports `projectOccurrences`.
+  `updateRule` (added in `0007`: edit in place, future-only), `setPrimaryIncome`,
+  `endRule` (future-only), `listActiveRules`, `getCycleAnchorDay` (primary income's
+  day, else 1 → calendar months), `toProjectionRule`; re-exports `projectOccurrences`.
 
 **Derived balances** (`walletBalance`, `pooledBalance`) compose
 `movements.repository` + `deriveBalance` and live in the **wallets** feature
@@ -462,12 +466,14 @@ obligation deducts the paying wallet; switch a cycle forward → projected Z.
 - [x] `features/recurring` — `projection.ts` (tested) + repository + service
 - [x] Old `transactions` + `dashboard` features removed; `categories` migrated to
       `MovementType` (narrowed `CategoryType`); home stubbed
-- [x] `bun run test` (50), `type-check`, `lint` clean
-- [ ] Forecast service implemented + UI — deferred to `0009`
-- [ ] Create/confirm orchestration (`recordCashExpense`/obligation/income) — in
-      `0007`/`0008`
-- [ ] `/simplify` + `/code-review` run on the diff
-- [ ] Status → `Implemented` once the dependent features consume the spine
+- [x] `bun run test`, `type-check`, `lint` clean (125 tests across the MVP)
+- [x] Forecast service implemented + UI — `0009` (`home.getCycleForecast` + `forecast.ts`)
+- [x] Create/confirm orchestration — income `0007`, expenses/obligations `0008`
+      (`recordExpense`, `addOneOff/RecurringIncome`, confirm + materialize paths)
+- [x] `/simplify` + `/code-review` run on each feature diff
+- [x] Status → `Implemented` — the spine is fully consumed by `0006`–`0009`.
+      Later additions: `recurring.update`/`updateRule` + `movements.findByRuleOnDate`
+      (see Data model / Shared modules notes above).
 
 ## 8. Follow-on RFCs
 

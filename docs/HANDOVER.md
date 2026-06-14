@@ -1,6 +1,6 @@
 # Handover — finance-tracker
 
-_Last updated: 2026-06-06_
+_Last updated: 2026-06-07_
 
 A living handover doc to resume work in a fresh session. For the "why/how we
 work", see `CLAUDE.md`, `docs/roadmap.md`, and `docs/prd/000-product-vision.md`.
@@ -76,13 +76,41 @@ always clean); revisit end-of-month paydays later. Logged in `0005` Risks.
 
 ## Next steps (resume after 2026-06-06)
 
-Foundation (`0005`) is done. Build the per-feature RFCs that consume the spine,
-in order — each: PRD already Approved → write RFC → TDD implement → sync docs:
+**✅ MVP FEATURE-COMPLETE (2026-06-06).** All feature RFCs `0006`–`0009`
+implemented; `0005` foundation flipped to `Implemented` (spine fully consumed).
+**125 tests green**, type-check + lint + `bun run build` clean; each feature
+`/simplify` + `/code-review`'d with fixes applied. On `feat/mvp-v0.1`, **NOT yet
+committed** — pending Sony's review + manual smoke-test.
 
-1. **`0006` Wallets** — CRUD + set-primary + archive; **`walletBalance` /
-   `pooledBalance`** here (compose `movements.repository` + `deriveBalance` with the
-   wallet's `startingBalance`). First consumer of the spine.
-2. **`0007` Income** — primary recurring (anchors cycle) + one-off/forward + tags +
+Shipped this session:
+
+1. ✅ **`0006` Wallets** — `src/features/wallets/`, route `/wallets`. `poolBalances`
+   (= X) composes `movements.repository` + `deriveBalance`; manual correction = signed
+   ADJUSTMENT; primary = atomic swap (no "remove primary"); delete auto-archives
+   in-use (P2003). Review fix: cleared adjust input can't silently zero a wallet.
+2. ✅ **`0007` Income** — `src/features/income/` (orchestration, no table), route
+   `/income`. Primary recurring (anchors cycle, day 1–28) upsert-in-place; secondary
+   recurring + one-off/forward; one-tap confirm. Spine additions: `recurring.update`/
+   `updateRule`, `movements.findByRuleOnDate` (confirm idempotency). Review fixes:
+   confirm count-guard + materialize dup-guard, UTC→local date default.
+3. ✅ **`0008` Expenses & obligations** — `src/features/{cards,expenses}/`, route
+   `/expenses`. Cards (CC/paylater) CRUD; `recordExpense` uses `resolveTiming` +
+   `nextDueDate` (cash now / CC·paylater on due date); recurring obligations;
+   client-side **impact preview** (pure `lib/cycle`); confirm/materialize. Review:
+   `toProjectionRule` shared into `recurring/projection`; recurring obligation
+   materializes `paymentMethod: null`. (Single-occurrence **skip deferred** to Phase 1.)
+4. ✅ **`0009` Home** — `src/features/home/`, real Beranda at `/`. Pure
+   `computeForecast` (X−Y=Z; current vs projected-opening); `getCycleForecast`
+   composes everything; cycle switcher (current + 12 forward; **past dropped** —
+   needs opening-balance reconstruction); "perlu konfirmasi" reuses `0007`/`0008`
+   confirm actions. Review: `toConfirm` in-cycle guard; page reuses the service's
+   wallet data (no double `listWallets`); shared `formatDateShort` → `lib/date`.
+
+Nav now: Beranda · Dompet · Pemasukan · Pengeluaran · Kategori.
+
+### Original per-feature plan (all done)
+
+- **`0007` Income** — primary recurring (anchors cycle) + one-off/forward + tags +
    one-tap confirm. **Enforce primary-income `dayOfMonth` 1–28 in Zod** (see open
    decision above).
 3. **`0008` Expenses & obligations** — cards + payment-method timing + impact
@@ -94,6 +122,86 @@ in order — each: PRD already Approved → write RFC → TDD implement → sync
 Then flip `0005` → `Implemented`. The foundation is **committed** (`3871b24`) but
 Sony **hasn't run the manual smoke-test yet** — verify the app still runs (login,
 categories CRUD, placeholder home, nav) when convenient; fix forward if anything broke.
+
+## Next session — polish & fixes plan (from smoke-test 2026-06-07)
+
+Source list: **`docs/polish-backlog.md`** (items #1–#6). Sony will implement these
+next session. Two already-applied this session: the **currency hydration fix**
+(`formatCurrency` normalizes the NBSP) and the **home cycle switcher** (long chip
+strip → compact dropdown pill). Everything below is **planned, not yet done**.
+
+> ⚠️ **Do NOT manually edit the dev DB.** The smoke-test left a wrongly-recorded
+> cash expense (balance shows `-Rp624.000`). It gets cleaned up *through the
+> delete feature* built in Batch C below — or a `db:migrate reset` if you want a
+> clean slate. No Prisma Studio hand-edits.
+
+Work in batches, cheapest/lowest-risk first. Each batch = TDD where logic exists,
+then `test`+`type-check`+`lint`+`build`, then `/simplify`+`/code-review`, then sync
+the touched RFC(s).
+
+### Batch A — notes ✅ DONE (2026-06-07; backlog #4 + #5)
+
+**Shipped.** Note now appended to the item subtitle (home "Jatuh tempo" +
+"Perlu konfirmasi", expenses list, income list) so same-tag items are
+distinguishable; `note` threaded `ForecastEvent → ForecastItemDTO → mapper →
+HomeView` (projected occurrences carry no note, mirroring `expenses.listExpenses`).
+`noteField` cap lowered **120 → 50** in income/expenses/wallet-adjust schemas.
+Gate green (125 tests · type-check · lint · build); RFCs `0007`/`0008`/`0009`
+synced (0009 `ForecastEvent` gained `note`; also fixed pre-existing 0009 drift —
+strip is `back: 0`, offset clamp `0…12`, matching the code). Not yet committed
+(per Sony: fix more first, then commit). Original plan below, for reference:
+
+- **#5** lower the Zod `noteField` cap **120 → 50** chars in `income/schema.ts`,
+  `expenses/schema.ts`, and the wallet adjust note (`wallets/schema.ts`).
+- **#4** render the **note** in the item lists (it's saved but never shown):
+  home obligations (`home-view.tsx`), expenses list (`expense-manager.tsx`),
+  income list (`income-manager.tsx`). Show note in the subtitle (prefer/append to
+  tag) so same-tag items (e.g. two "Ortu") are distinguishable. Note → the DTOs
+  already carry it? check: `ExpenseItem`/`IncomeItem` have `note`; `ForecastEvent`
+  does **not** → add `note` to `ForecastEvent` + the home mapper if home should show it.
+- RFC sync: `0007`/`0008` (+ `0009` if `ForecastEvent` gains `note`).
+
+### Batch B — reusable inputs (polish; backlog #1 + #2)
+
+- **#2 currency input** — a reusable client component: `Rp` prefix + live
+  thousand-grouping (**id-ID dots**, `Rp 1.000.000`, consistent w/ `formatCurrency`;
+  confirm dot-not-comma w/ Sony), stores the raw number, submits digits only,
+  `inputMode="numeric"`, no spinner. Swap into every amount field (income, expense,
+  wallet start + adjust, recurring obligation).
+- **#1 date picker** — replace native `<input type="date">` (ugly OS popup) with a
+  styled picker (Radix Popover + a small day-grid, or a day-of-month picker).
+  Fields: one-off income date, expense tx date, expense due date.
+- Pure UI → no RFC, but note the new shared components in `src/components/ui` or
+  `components/`.
+
+### Batch C — expenses management + planned expense (functional; backlog #3 + #6)
+
+This is the meatiest and unblocks the stuck `-624k` state. **Update RFC `0008`**
+(and touch `0009` for the home), TDD the service additions.
+
+- **#3a cycle switcher on `/expenses`** — `listExpenses` already takes `offset`;
+  add the same dropdown-pill switcher as the home (`?offset` searchParam on the
+  expenses page) so future-cycle items are viewable/manageable.
+- **#3b edit + delete one-off expenses** — wire `movements.service.deleteMovement`
+  (already exists) + a new `updateMovement` path (amount/category/date/note; for a
+  PLANNED obligation also amount/due). Add per-row edit/delete in the expenses list.
+  Likely also want the same edit/delete on the **income** list (`0007`).
+- **#6 planned (future) one-off expense** — add an **"belum dibayar / rencana"
+  toggle** to the expense capture, symmetric with income's "sudah diterima". When
+  off (+ method cash): record **PLANNED** on its `effectiveDate` → lands in that
+  cycle's **Y "Bakal keluar"**, does **not** deduct the wallet until confirmed
+  "Bayar" (reuses `confirmObligation`). This is the principled fix for "I want to
+  log a future expense without it hitting my balance now" — *don't* manual-adjust
+  the balance, and *don't* force it to CC/paylater unless it's actually card-paid.
+
+**Open decisions to confirm before coding Batch C:**
+- #6: confirm the planned-expense toggle approach (Sony leaned yes). Note: a
+  future-dated *cash* expense currently still reduces today's balance because
+  `deriveBalance` sums all ACTUAL regardless of date — the PLANNED path sidesteps
+  this without changing `deriveBalance`.
+- #3b: which fields are editable on an already-PLANNED obligation; delete-confirm UX
+  (native `confirm()` like elsewhere, or a styled dialog).
+- #2: dot vs comma grouping (recommended: dot / id-ID, matches the rest of the app).
 
 ## How to resume (local setup)
 
