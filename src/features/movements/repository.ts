@@ -20,11 +20,12 @@ export function listActualByWallet(userId: string, walletId: string) {
   });
 }
 
-/** All of a user's actual movements (for the pooled balance). */
+/** All of a user's actual movements, tagged with walletId (for the pooled
+ * balance in one query instead of one-per-wallet). */
 export function listActualByUser(userId: string) {
   return prisma.movement.findMany({
     where: { userId, status: MovementStatus.ACTUAL },
-    select: balanceSelect,
+    select: { ...balanceSelect, walletId: true },
   });
 }
 

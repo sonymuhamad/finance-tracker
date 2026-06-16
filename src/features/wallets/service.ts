@@ -34,18 +34,20 @@ export async function listWallets(userId: string) {
     await repo.createPrimary(userId, DEFAULT_WALLET);
   }
 
-  const [active, archived] = await Promise.all([
+  const [active, archived, actualRows] = await Promise.all([
     repo.listActive(userId),
     repo.listArchived(userId),
+    // One query for all ACTUAL movements (tagged with walletId) instead of one
+    // per wallet — poolBalances groups them and ignores any non-active wallet.
+    movementsRepo.listActualByUser(userId),
   ]);
 
-  const movementsByWallet = await Promise.all(
-    active.map(async (w) => {
-      const rows = await actualMovements(userId, w.id);
-      return rows.map((m) => ({ walletId: w.id, ...m }));
-    }),
-  );
-  const movements = movementsByWallet.flat();
+  const movements = actualRows.map((m) => ({
+    walletId: m.walletId,
+    type: m.type,
+    status: m.status,
+    amount: Number(m.amount),
+  }));
 
   const { perWallet, pooled } = poolBalances(
     active.map((w) => ({
