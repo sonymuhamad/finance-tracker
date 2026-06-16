@@ -10,12 +10,20 @@ _(empty — all MVP polish items shipped; see Done below.)_
 
 ## Post-MVP (deferred — after v0.1 ships; Sony's call 2026-06-14)
 
-| # | Where | Want | Note |
-|---|---|---|---|
-| 7 | `/expenses` page | A **cycle spending summary** on the page — total pengeluaran (and likely the X→Y→Z mini-recap) for the selected cycle — so you don't bounce back to Beranda to see "berapa total pengeluaran siklus ini" while recording. | Expenses page currently only lists items + recurring rules; no totals. Could reuse `home`'s forecast or add a lightweight per-cycle total in `listExpenses`. |
-| 8 | `/expenses` page | **UX / empty-state polish** — the page feels bare/empty and the hierarchy is weak. Improve layout, empty states, and visual rhythm (esp. when few items). | General redesign pass; pairs with #7. |
+_(empty — #7/#8 shipped 2026-06-15; see Done below.)_
 
 ## Done
+
+**Post-MVP `/expenses` summary + UX polish (#7/#8) — 2026-06-15.** Branch
+`feat/expenses-summary-polish`. Gate green (156 tests · type-check · lint · build);
+independent code-review pass (correctness clean; one efficiency cleanup applied —
+the page now reuses the wallets `getCycleForecast` already returns instead of a
+second `listWallets`); RFC `0008` synced (`last_verified: 2026-06-15`).
+
+| # | Where | Fix shipped |
+|---|---|---|
+| 7 | `/expenses` page | **Cycle spending summary card** as the page's focal point: **Total pengeluaran** for the selected cycle + a **Sudah keluar** (paid/ACTUAL) / **Bakal keluar** (due+projected = the home's Y) split, plus a tappable **"Aman dipakai «Z»"** recap so you don't bounce to Beranda while recording. Totals from new pure `summarizeExpenseItems(items)` (derived from the same items listed below, so the headline always matches the rows); Z reuses `home.getCycleForecast` (single source of truth — identical to Beranda, no drift). |
+| 8 | `/expenses` page | **UX / empty-state polish** — a local `<EmptyState>` (icon + message + inline add action) now renders for each of the three sections (items, recurring obligations, cards) when empty, instead of a bare line / nothing; the items empty state adapts its copy for a future/projected cycle. The summary card gives the page a strong top, fixing the bare/weak-hierarchy feel. |
 
 **Batch B + C (2026-06-14).** Gate green (141 tests · type-check · lint · build);
 independent code-review pass (no material findings); RFCs `0007`/`0008`/`0009` synced.

@@ -36,5 +36,6 @@ export function toExpenseViewDTO(view: ExpenseView): ExpenseViewDTO {
     strip: view.strip.map((c) => ({ offset: c.offset, label: c.label })),
     recurringObligations: view.recurringObligations.map(toObligationDTO),
     items: view.items.map(toItemDTO),
+    summary: view.summary,
   };
 }

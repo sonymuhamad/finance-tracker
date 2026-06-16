@@ -74,7 +74,7 @@ future cycles.
 
 ## Backlog (unscheduled)
 
-- **`/expenses` cycle spending summary + UX polish** — show the cycle's total
-  pengeluaran (and X→Y→Z mini-recap) on the expenses page so you don't bounce to
-  Beranda while recording; tidy the page's empty/bare layout. (Deferred 2026-06-14;
-  details in `docs/polish-backlog.md` #7/#8.)
+- ✅ **`/expenses` cycle spending summary + UX polish** — shipped 2026-06-15
+  (branch `feat/expenses-summary-polish`): spending summary card (total + sudah/bakal
+  + "aman dipakai" Z recap) and friendly empty states. Details in
+  `docs/polish-backlog.md` Done (#7/#8).
