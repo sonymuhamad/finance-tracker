@@ -157,8 +157,25 @@ export function IncomeManager({
     if (note) fd.set("note", note);
   }
 
-  function submit(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
+
+    // Changing the payday re-anchors every cycle, so past income/expenses can
+    // shift between cycles (the data isn't lost, just re-bucketed). Warn first.
+    if (
+      dialog === "primary" &&
+      view.primary &&
+      Number(dayOfMonth) !== view.primary.dayOfMonth
+    ) {
+      const ok = await confirm({
+        title: "Ubah tanggal gajian?",
+        description:
+          "Semua siklus bakal bergeser — pengeluaran & pemasukan lama bisa pindah siklus. Datanya nggak hilang, cuma dikelompokin ulang.",
+        confirmLabel: "Ya, ubah",
+      });
+      if (!ok) return;
+    }
+
     const fd = new FormData();
     buildBase(fd);
 
@@ -548,6 +565,11 @@ export function IncomeManager({
                   value={dayOfMonth}
                   onChange={(e) => setDayOfMonth(e.target.value)}
                 />
+                {dialog !== "primary" && Number(dayOfMonth) >= 29 && (
+                  <p className="text-muted-foreground text-xs">
+                    Tanggal 29–31 bisa terlewat di bulan pendek (mis. Februari).
+                  </p>
+                )}
               </div>
             )}
 

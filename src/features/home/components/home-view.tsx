@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Plus } from "lucide-react";
+import { CalendarClock, Check, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useTransition } from "react";
 import { toast } from "sonner";
@@ -83,6 +83,29 @@ export function HomeView({
           basePath="/"
         />
       </div>
+
+      {/* First-run nudge: without a primary income the cycle silently falls back
+          to calendar months, quietly breaking the "before payday" promise. */}
+      {!home.hasPrimaryIncome && (
+        <Link
+          href="/income"
+          className="flex items-center justify-between gap-3 rounded-3xl border border-primary/30 bg-primary/5 p-4 transition hover:bg-primary/10"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <CalendarClock className="size-5" />
+            </span>
+            <span>
+              <span className="block font-medium">Atur gaji utama dulu</span>
+              <span className="block text-muted-foreground text-sm">
+                Biar "aman dipakai" ngikut siklus gajianmu, bukan bulan
+                kalender.
+              </span>
+            </span>
+          </span>
+          <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+        </Link>
+      )}
 
       {/* Hero — Z */}
       <div className="rounded-3xl border bg-card p-6 text-center">

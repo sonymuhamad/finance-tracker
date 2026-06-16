@@ -1158,6 +1158,11 @@ export function ExpenseManager({
                 value={oDay}
                 onChange={(e) => setODay(e.target.value)}
               />
+              {Number(oDay) >= 29 && (
+                <p className="text-muted-foreground text-xs">
+                  Tanggal 29–31 bisa terlewat di bulan pendek (mis. Februari).
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Bayar dari dompet</Label>
