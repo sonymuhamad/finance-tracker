@@ -1,0 +1,38 @@
+name: CI
+
+# Quality gate (the "release staging" gate): runs the project's DoD checks on
+# pushes to main. The actual deploy is done from local via the Vercel CLI
+# (vercel / vercel --prod), so this workflow does not deploy.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # postinstall runs `prisma generate`, so the generated client exists for
+      # type-check / build.
+      - run: bun install --frozen-lockfile
+
+      - run: bun run type-check
+      - run: bun run lint
+      - run: bun run test
+      - run: bun run build
+        env:
+          # Placeholders so module init (Prisma client / Auth.js) doesn't fail at
+          # build time. All routes are dynamic (server-rendered on demand), so the
+          # build never opens a DB connection — no real database is needed in CI.
+          DATABASE_URL: postgres://ci:ci@localhost:5432/ci?sslmode=disable
+          AUTH_SECRET: ci-placeholder-secret-not-used-at-runtime

@@ -1,0 +1,42 @@
+name: DB migrate
+
+# Apply pending Prisma migrations to a target database with `prisma migrate
+# deploy` (production-safe: applies committed migrations, never generates or
+# resets). Manual only — pick the environment when you run it.
+#
+# Setup (one-time): create GitHub Environments named `staging` and `production`
+# (Settings → Environments), each with a secret `DATABASE_URL` set to that env's
+# Neon **DIRECT** connection string (the non-pooled one — `migrate deploy` needs a
+# direct connection; the pooled `-pooler` URL is only for the app runtime). Add
+# required reviewers on the `production` environment for an extra confirm gate.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment (uses its DATABASE_URL = Neon DIRECT url)"
+        type: environment
+        required: true
+
+concurrency:
+  # Never run two migrations against the same environment at once.
+  group: db-migrate-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Apply migrations
+        run: bunx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
