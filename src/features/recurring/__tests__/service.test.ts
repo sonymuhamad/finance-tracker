@@ -31,6 +31,24 @@ describe("updateRule", () => {
   });
 });
 
+describe("endRule", () => {
+  it("ends a rule that exists", async () => {
+    vi.mocked(repo.end).mockResolvedValue({ count: 1 });
+
+    await service.endRule("r1", "u1");
+
+    expect(repo.end).toHaveBeenCalledWith("r1", "u1", expect.any(Date));
+  });
+
+  it("rejects ending a missing rule instead of a phantom success", async () => {
+    vi.mocked(repo.end).mockResolvedValue({ count: 0 });
+
+    await expect(service.endRule("x", "u1")).rejects.toBeInstanceOf(
+      DomainError,
+    );
+  });
+});
+
 describe("getCycleAnchorDay", () => {
   it("returns the primary income's day-of-month", async () => {
     vi.mocked(repo.findPrimaryIncome).mockResolvedValue({

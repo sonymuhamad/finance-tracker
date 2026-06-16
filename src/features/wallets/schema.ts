@@ -12,7 +12,10 @@ export type WalletTypeValue = z.infer<typeof walletTypeSchema>;
 const balanceField = z.coerce
   .number({ message: "Saldo tidak valid" })
   .finite("Saldo tidak valid")
-  .min(0, "Saldo tidak boleh negatif");
+  .min(0, "Saldo tidak boleh negatif")
+  // Cap well under Decimal(18,2) and Number.MAX_SAFE_INTEGER so a huge value
+  // can't overflow the DB column (an unhandled 500) or lose integer precision.
+  .max(1_000_000_000_000, "Saldo terlalu besar");
 
 export const createWalletSchema = z.object({
   name: z

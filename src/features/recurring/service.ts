@@ -38,12 +38,15 @@ export async function updateRule(
   if (res.count === 0) throw new DomainError("Aturan tidak ditemukan.");
 }
 
-export function endRule(
+export async function endRule(
   id: string,
   userId: string,
   endedAt: Date = new Date(),
 ) {
-  return repo.end(id, userId, endedAt);
+  const res = await repo.end(id, userId, endedAt);
+  // updateMany matched nothing → not found / not owned. Don't report a phantom
+  // success (consistent with updateRule).
+  if (res.count === 0) throw new DomainError("Aturan tidak ditemukan.");
 }
 
 export function listActiveRules(userId: string) {

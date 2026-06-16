@@ -20,6 +20,11 @@ export function countByUser(userId: string) {
   return prisma.category.count({ where: { userId } });
 }
 
+/** A single category scoped by userId (for cross-entity ownership checks). */
+export function findById(id: string, userId: string) {
+  return prisma.category.findFirst({ where: { id, userId } });
+}
+
 export function create(userId: string, data: CategoryData) {
   return prisma.category.create({ data: { userId, ...data } });
 }
