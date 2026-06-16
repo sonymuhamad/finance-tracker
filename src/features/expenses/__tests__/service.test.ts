@@ -8,6 +8,7 @@ import {
 import { toCycleDate } from "@/lib/cycle";
 import { DomainError } from "@/lib/errors";
 import { nextDueDate } from "../timing";
+import type { ExpenseItem } from "../types";
 
 vi.mock("@/features/cards/repository");
 vi.mock("@/features/recurring/service");
@@ -666,6 +667,15 @@ describe("listExpenses", () => {
     const projected = view.items.filter((i) => i.kind === "projected");
     expect(projected).toHaveLength(1);
     expect(projected[0]?.ruleId).toBe("spp");
+
+    // Summary rolls the same items up: paid 100k spent; due 100k + projected
+    // 1.5M upcoming; 3 contributing rows.
+    expect(view.summary).toEqual({
+      spent: 100_000,
+      upcoming: 1_600_000,
+      total: 1_700_000,
+      count: 3,
+    });
   });
 
   it("shows a SKIPPED occurrence as 'skipped' and suppresses its projection", async () => {
@@ -693,5 +703,52 @@ describe("listExpenses", () => {
     // The skipped row shows once, and "spp" no longer projects a second row.
     expect(view.items.filter((i) => i.kind === "skipped")).toHaveLength(1);
     expect(view.items.some((i) => i.kind === "projected")).toBe(false);
+    // A skipped occurrence is the only item → it contributes nothing.
+    expect(view.summary).toEqual({
+      spent: 0,
+      upcoming: 0,
+      total: 0,
+      count: 0,
+    });
+  });
+});
+
+describe("summarizeExpenseItems", () => {
+  const item = (over: Partial<ExpenseItem>): ExpenseItem => ({
+    kind: "due",
+    movementId: "m",
+    ruleId: null,
+    amount: 0,
+    walletId: "w",
+    cardId: null,
+    categoryId: null,
+    paymentMethod: null,
+    effectiveDate: new Date("2026-06-26"),
+    note: null,
+    ...over,
+  });
+
+  it("splits paid (spent) from due/projected (upcoming) and excludes skipped", () => {
+    const summary = service.summarizeExpenseItems([
+      item({ kind: "paid", amount: 250_000 }),
+      item({ kind: "due", amount: 100_000 }),
+      item({ kind: "projected", amount: 1_500_000, ruleId: "spp" }),
+      item({ kind: "skipped", amount: 999_999, ruleId: "spp" }),
+    ]);
+    expect(summary).toEqual({
+      spent: 250_000,
+      upcoming: 1_600_000,
+      total: 1_850_000,
+      count: 3,
+    });
+  });
+
+  it("is all-zero for an empty cycle", () => {
+    expect(service.summarizeExpenseItems([])).toEqual({
+      spent: 0,
+      upcoming: 0,
+      total: 0,
+      count: 0,
+    });
   });
 });

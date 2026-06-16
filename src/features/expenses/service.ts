@@ -30,6 +30,7 @@ import {
   toCycleDate,
 } from "@/lib/cycle";
 import { DomainError } from "@/lib/errors";
+import { roundMoney } from "@/lib/money";
 import type {
   AdjustOccurrenceInput,
   ConfirmObligationInput,
@@ -40,7 +41,7 @@ import type {
   UpdateExpenseInput,
 } from "./schema";
 import { nextDueDate } from "./timing";
-import type { ExpenseItem, ExpenseView } from "./types";
+import type { ExpenseItem, ExpenseSummary, ExpenseView } from "./types";
 
 /**
  * Expenses & obligations (RFC 0008). Orchestration over `movements` + `cards` +
@@ -361,6 +362,30 @@ export async function restoreObligationOccurrence(
 }
 
 /** This cycle's expenses + obligations: paid, due (planned), projected recurring. */
+/**
+ * Pure: roll the cycle's items into headline totals. `paid` is money already out
+ * (ACTUAL); `due` + `projected` are still upcoming (= the home's Y). `skipped`
+ * doesn't count. Totals are derived from the same `items` the page lists, so the
+ * headline always equals the sum of the rows below it.
+ */
+export function summarizeExpenseItems(items: ExpenseItem[]): ExpenseSummary {
+  let spent = 0;
+  let upcoming = 0;
+  let count = 0;
+  for (const item of items) {
+    if (item.kind === "skipped") continue;
+    count += 1;
+    if (item.kind === "paid") spent += item.amount;
+    else upcoming += item.amount;
+  }
+  return {
+    spent: roundMoney(spent),
+    upcoming: roundMoney(upcoming),
+    total: roundMoney(spent + upcoming),
+    count,
+  };
+}
+
 export async function listExpenses(
   userId: string,
   offset = 0,
@@ -435,5 +460,6 @@ export async function listExpenses(
     recurringObligations: expenseRules,
     cards,
     items,
+    summary: summarizeExpenseItems(items),
   };
 }

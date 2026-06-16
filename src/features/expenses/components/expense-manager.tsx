@@ -2,15 +2,24 @@
 
 import {
   Check,
+  ChevronRight,
   CreditCard,
   Pencil,
   Plus,
+  Receipt,
   Repeat,
   RotateCcw,
+  ShieldCheck,
   Trash2,
   X,
 } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import Link from "next/link";
+import {
+  type ComponentType,
+  type FormEvent,
+  useState,
+  useTransition,
+} from "react";
 import { toast } from "sonner";
 import { CycleSwitcher } from "@/components/cycle-switcher";
 import { Button } from "@/components/ui/button";
@@ -94,17 +103,60 @@ function dateToInput(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+type Recap = {
+  z: number; // "aman dipakai sampai gajian" — from the home forecast
+  perDay: number;
+  isProjected: boolean;
+};
+
+/** Friendly empty state: icon + message + an optional inline action. Keeps an
+ * empty section from rendering as a bare header (the page felt hollow before). */
+function EmptyState({
+  icon: Icon,
+  title,
+  subtitle,
+  action,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  subtitle: string;
+  action?: { label: string; onClick: () => void };
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed bg-card px-6 py-10 text-center">
+      <span className="flex size-12 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
+        <Icon className="size-6" />
+      </span>
+      <p className="font-medium">{title}</p>
+      <p className="max-w-xs text-muted-foreground text-sm">{subtitle}</p>
+      {action && (
+        <Button
+          onClick={action.onClick}
+          variant="secondary"
+          size="sm"
+          className="mt-1 gap-1.5"
+        >
+          <Plus className="size-4" /> {action.label}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function ExpenseManager({
   view,
+  recap,
   cards,
   wallets,
   tags,
 }: {
   view: ExpenseViewDTO;
+  recap: Recap;
   cards: CardDTO[];
   wallets: Wallet[];
   tags: Tag[];
 }) {
+  const { summary } = view;
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [pending, startTransition] = useTransition();
   const defaultWallet = wallets[0]?.id ?? "";
@@ -428,32 +480,108 @@ export function ExpenseManager({
         </Button>
       </div>
 
-      <div className="flex items-center justify-between gap-3 rounded-3xl border bg-card p-5">
-        <div>
-          <p className="text-muted-foreground text-sm">
-            {view.cycle.isCurrent ? "Siklus ini" : "Proyeksi siklus"}
-          </p>
-          <p className="mt-1 font-heading text-2xl">{view.cycle.label}</p>
+      {/* Spending summary — the at-a-glance the page was missing (#7). Totals
+          come from the same items listed below, so the headline always matches. */}
+      <section className="space-y-4 rounded-3xl border bg-card p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-muted-foreground text-sm">
+              {view.cycle.isCurrent ? "Siklus ini" : "Proyeksi siklus"}
+            </p>
+            <p className="mt-0.5 font-heading text-lg">{view.cycle.label}</p>
+          </div>
+          <CycleSwitcher
+            strip={view.strip}
+            current={view.cycle.offset}
+            basePath="/expenses"
+          />
         </div>
-        <CycleSwitcher
-          strip={view.strip}
-          current={view.cycle.offset}
-          basePath="/expenses"
-        />
-      </div>
+
+        <div className="border-t pt-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-muted-foreground text-sm">Total pengeluaran</p>
+            {summary.count > 0 && (
+              <span className="text-muted-foreground text-xs">
+                {summary.count} item
+              </span>
+            )}
+          </div>
+          <p className="mt-1 font-heading text-3xl tabular-nums">
+            {formatCurrency(summary.total)}
+          </p>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-secondary/50 p-3">
+              <p className="text-muted-foreground text-xs">Sudah keluar</p>
+              <p className="mt-0.5 font-medium tabular-nums">
+                {formatCurrency(summary.spent)}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-secondary/50 p-3">
+              <p className="text-muted-foreground text-xs">Bakal keluar</p>
+              <p className="mt-0.5 font-medium text-destructive tabular-nums">
+                {formatCurrency(summary.upcoming)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Safe-to-spend recap, so you don't bounce to Beranda while recording. */}
+        <Link
+          href="/"
+          className="-mx-1 flex items-center justify-between gap-2 rounded-2xl bg-primary/5 px-3 py-3 transition hover:bg-primary/10"
+        >
+          <span className="flex items-center gap-2 text-sm">
+            <ShieldCheck className="size-4 shrink-0 text-primary" />
+            <span>
+              Aman dipakai{" "}
+              <b
+                className={cn(
+                  "tabular-nums",
+                  recap.z < 0 && "text-destructive",
+                )}
+              >
+                {formatCurrency(recap.z)}
+              </b>
+              {recap.z >= 0 && !recap.isProjected && (
+                <span className="text-muted-foreground">
+                  {" "}
+                  · ~{formatCurrency(recap.perDay)}/hari
+                </span>
+              )}
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
+      </section>
 
       {/* This cycle's expenses & obligations */}
       <section className="space-y-2">
         <h2 className="font-heading text-muted-foreground text-sm">
           Pengeluaran & tagihan siklus ini
         </h2>
-        <ul className="overflow-hidden rounded-3xl border bg-card">
-          {view.items.length === 0 ? (
-            <li className="p-4 text-muted-foreground text-sm">
-              Belum ada pengeluaran di siklus ini.
-            </li>
-          ) : (
-            view.items.map((item) => {
+        {view.items.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title={
+              view.cycle.isCurrent
+                ? "Belum ada pengeluaran"
+                : "Belum ada pengeluaran terjadwal"
+            }
+            subtitle={
+              view.cycle.isCurrent
+                ? "Catat pengeluaran pertamamu di siklus ini."
+                : "Tagihan rutin & rencana bakal muncul di sini otomatis."
+            }
+            action={
+              view.cycle.isCurrent
+                ? { label: "Catat pengeluaran", onClick: openExpense }
+                : undefined
+            }
+          />
+        ) : (
+          <ul className="overflow-hidden rounded-3xl border bg-card">
+            {view.items.map((item) => {
               const tag = tagOf(item.categoryId);
               const card = cardOf(item.cardId);
               return (
@@ -554,9 +682,9 @@ export function ExpenseManager({
                   </div>
                 </li>
               );
-            })
-          )}
-        </ul>
+            })}
+          </ul>
+        )}
       </section>
 
       {/* Recurring obligations */}
@@ -573,7 +701,17 @@ export function ExpenseManager({
             <Plus className="size-3.5" /> Tambah
           </button>
         </div>
-        {view.recurringObligations.length > 0 && (
+        {view.recurringObligations.length === 0 ? (
+          <EmptyState
+            icon={Repeat}
+            title="Belum ada tagihan rutin"
+            subtitle="Cicilan, SPP, langganan — biar muncul otomatis tiap siklus."
+            action={{
+              label: "Tambah tagihan rutin",
+              onClick: () => openObligation(),
+            }}
+          />
+        ) : (
           <ul className="overflow-hidden rounded-3xl border bg-card">
             {view.recurringObligations.map((rule) => (
               <li
@@ -629,7 +767,14 @@ export function ExpenseManager({
             <Plus className="size-3.5" /> Tambah
           </button>
         </div>
-        {cards.length > 0 && (
+        {cards.length === 0 ? (
+          <EmptyState
+            icon={CreditCard}
+            title="Belum ada kartu"
+            subtitle="Tambah kartu kredit / paylater buat nyatet cicilan & tagihannya."
+            action={{ label: "Tambah kartu", onClick: () => openCard() }}
+          />
+        ) : (
           <ul className="overflow-hidden rounded-3xl border bg-card">
             {cards.map((card) => (
               <li

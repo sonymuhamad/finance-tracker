@@ -5,8 +5,8 @@ status: Implemented # Draft → Approved → In Progress → Implemented
 prd: # docs/prd/mvp/007-expenses-and-obligations.md
 author: Engineering
 created: 2026-06-06
-last_updated: 2026-06-07
-last_verified: 2026-06-14 # implementation matches this doc (153 tests green; + per-occurrence adjust/skip/restore (SKIPPED) + lock-paid)
+last_updated: 2026-06-15
+last_verified: 2026-06-15 # matches code (156 tests green; + /expenses cycle spending summary (summarizeExpenseItems) + Z recap via home.getCycleForecast + friendly empty states, polish #7/#8)
 ---
 
 # RFC 0008 — Expenses & obligations
@@ -92,7 +92,8 @@ nextDueDate(dueDay: number, from: Date): Date
 | `adjustObligationOccurrence(userId, {ruleId, occurrenceDate, amount})` | **Per-occurrence amount override** (this cycle only). `loadOccurrence` finds-or-creates a `Movement` for (rule, date): if one exists (and isn't ACTUAL) → `updateMovement` to `{amount, status: PLANNED}`; else `createMovement` PLANNED from the rule. Materializing suppresses that cycle's projection. |
 | `skipObligationOccurrence(userId, {ruleId, occurrenceDate})` | **Skip this cycle's occurrence** — materialize/flip the (rule, date) movement to **`SKIPPED`** (drops out of Y, never hits balance; the rule keeps running next cycle). |
 | `restoreObligationOccurrence(userId, {ruleId, occurrenceDate})` | **Undo** an adjust/skip — delete the (rule, date) marker so the default projection returns. |
-| `listExpenses(userId, offset?)` | This cycle's expenses + obligations (actual cash → `paid`, planned → `due`, `SKIPPED` → `skipped`, projected recurring EXPENSE minus materialized), plus the active recurring obligations + cards for the UI, **plus a `strip` of current + 12 forward cycles** for the switcher. Same compose-on-read shape as `listIncome`. |
+| `listExpenses(userId, offset?)` | This cycle's expenses + obligations (actual cash → `paid`, planned → `due`, `SKIPPED` → `skipped`, projected recurring EXPENSE minus materialized), plus the active recurring obligations + cards for the UI, **plus a `strip` of current + 12 forward cycles** for the switcher, **plus a `summary`** (see below). Same compose-on-read shape as `listIncome`. |
+| `summarizeExpenseItems(items)` | **Pure** roll-up of the cycle's items into headline totals: `{ spent, upcoming, total, count }` — `paid` → `spent` (already out, ACTUAL), `due` + `projected` → `upcoming` (still due, equals the home's Y), `skipped` excluded. Derived from the **same `items`** the page lists, so the headline always equals the sum of the rows. Returned by `listExpenses` as `view.summary`. |
 
 > **Per-occurrence overrides (was deferred; shipped 2026-06-14).** A recurring
 > obligation can be **adjusted or skipped for a single cycle** without touching the
@@ -146,12 +147,20 @@ cardSchema = { name, kind: z.enum([CREDIT_CARD, PAYLATER]), defaultDueDay(1–31
 ### UI
 
 - **Route `/expenses`** (nav **"Pengeluaran"**). Server component reads `?offset`
-  (clamped 0…12), fetches `listExpenses(offset)`, EXPENSE categories, active
-  wallets, active cards, and the cycle `anchorDay`; renders `<ExpenseManager>`.
+  (clamped 0…12), fetches `listExpenses(offset)`, EXPENSE categories, and the
+  cycle `anchorDay`; renders `<ExpenseManager>`. It **also calls
+  `home.getCycleForecast(offset)`** for the same cycle — reusing its `forecast`
+  (the `z` "aman dipakai" recap, identical to Beranda — single source of truth, no
+  drift) **and** the `wallets` it already returns (so no second `listWallets` pass).
 - **`ExpenseManager`** (client; controlled-state forms like `IncomeManager`):
+  - **Spending summary card** (polish #7) — the page's focal point: cycle label +
+    `<CycleSwitcher>`, then **Total pengeluaran** (`summary.total`) with a
+    **Sudah keluar** (`summary.spent`) / **Bakal keluar** (`summary.upcoming`) split,
+    and a tappable **"Aman dipakai «Z»"** recap (links to Beranda) so you don't bounce
+    while recording. Totals come from the same items listed below.
   - **Cycle banner + `<CycleSwitcher>`** — the same shared dropdown-pill the home
     uses (`src/components/cycle-switcher.tsx`), linking to `/expenses?offset=N`, so
-    future cycles' items are viewable/manageable.
+    future cycles' items are viewable/manageable. (Folded into the summary card's header.)
   - **Capture dialog** (the mockup's "Catat cepat" expense side): amount
     (`<CurrencyInput>`) → method chips (Cash/Kartu Kredit/Paylater) → source (wallet
     for cash, card for CC/paylater) → **due date** (CC/paylater `<DatePicker>`,
@@ -176,6 +185,11 @@ cardSchema = { name, kind: z.enum([CREDIT_CARD, PAYLATER]), defaultDueDay(1–31
 - Inputs use the shared `<CurrencyInput>` (Rp + id-ID grouping) and `<DatePicker>`
   (styled calendar) from Batch B, replacing native number/date inputs.
 - Category picker = EXPENSE categories (＋ kelola → `/categories`).
+- **Empty states** (polish #8) — each of the three sections (items, recurring
+  obligations, cards) renders a friendly local `EmptyState` (icon + message +
+  inline add action) when empty, instead of a bare line / nothing, so a fresh or
+  sparse cycle no longer looks hollow. The items empty state adapts its copy for a
+  future/projected cycle (no "catat" action there).
 
 The per-card **Y grouping** + the home's obligations roll-up is `0009`; `0008`
 ships capture, cards, recurring obligations, and this-cycle list + confirm.
@@ -257,7 +271,10 @@ month-length clamp (Feb/30/31), on-or-after boundary.
   `restoreObligationOccurrence`: materialize PLANNED override / SKIPPED / delete marker;
   **reject** overriding an already-paid (ACTUAL) occurrence.
 - `listExpenses`: actual + planned + projected EXPENSE; excludes materialized rules;
-  **a SKIPPED occurrence shows as `skipped` and suppresses its projection**.
+  **a SKIPPED occurrence shows as `skipped` and suppresses its projection**; returns
+  a `summary` that rolls the same items up.
+- `summarizeExpenseItems` (pure): splits `paid`→`spent` vs `due`/`projected`→`upcoming`,
+  excludes `skipped`, totals & counts; all-zero for an empty cycle.
 - `cards.service`: create/update; `removeCard` deletes fresh, P2003 → archive.
 
 **Manual:** cash expense drops the wallet now; CC expense (card due day 3, today

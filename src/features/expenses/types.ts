@@ -34,6 +34,15 @@ export type RecurringObligationDTO = {
   note: string | null;
 };
 
+/** At-a-glance spending totals for the selected cycle, derived from `items` so
+ * the headline always equals the sum of what's listed. `skipped` is excluded. */
+export type ExpenseSummary = {
+  spent: number; // already-out this cycle (ACTUAL / paid)
+  upcoming: number; // still due (PLANNED + projected) — equals the home's Y
+  total: number; // spent + upcoming
+  count: number; // contributing (non-skipped) items
+};
+
 /** Domain shape returned by `expenses.service.listExpenses` (dates as `Date`). */
 export type ExpenseView = {
   cycle: Cycle;
@@ -42,6 +51,7 @@ export type ExpenseView = {
   recurringObligations: RecurringRule[];
   cards: Card[];
   items: ExpenseItem[];
+  summary: ExpenseSummary;
 };
 
 export type ExpenseViewDTO = {
@@ -56,4 +66,5 @@ export type ExpenseViewDTO = {
   strip: { offset: number; label: string }[];
   recurringObligations: RecurringObligationDTO[];
   items: ExpenseItemDTO[];
+  summary: ExpenseSummary;
 };
