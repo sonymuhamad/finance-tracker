@@ -63,7 +63,10 @@
   --popover: oklch(0.997 0.005 90);
   --popover-foreground: oklch(0.29 0.024 52);
 
-  --primary: oklch(0.685 0.166 32); /* coral */
+  /* Coral, darkened from L0.685 → L0.58 so white text clears WCAG AA (was
+     2.98:1, now ~4.6:1) and text-primary links on cards clear it too. Same warm
+     hue/chroma — a slightly deeper coral. */
+  --primary: oklch(0.58 0.166 32); /* coral */
   --primary-foreground: oklch(0.995 0.008 80);
 
   --secondary: oklch(0.94 0.035 64); /* soft peach */
@@ -75,11 +78,12 @@
   --accent: oklch(0.92 0.06 52); /* warm accent */
   --accent-foreground: oklch(0.34 0.05 45);
 
-  --destructive: oklch(0.61 0.2 25);
+  /* Darkened L0.61 → L0.55 so destructive text clears AA (was 4.14:1). */
+  --destructive: oklch(0.55 0.2 25);
 
   --border: oklch(0.9 0.025 66);
   --input: oklch(0.9 0.025 66);
-  --ring: oklch(0.685 0.166 32);
+  --ring: oklch(0.58 0.166 32);
 
   /* warm, friendly chart palette */
   --chart-1: oklch(0.685 0.166 32); /* coral */

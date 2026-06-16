@@ -14,15 +14,11 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import {
-  type ComponentType,
-  type FormEvent,
-  useState,
-  useTransition,
-} from "react";
+import { type FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { CycleSwitcher } from "@/components/cycle-switcher";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -33,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -109,40 +106,6 @@ type Recap = {
   isProjected: boolean;
 };
 
-/** Friendly empty state: icon + message + an optional inline action. Keeps an
- * empty section from rendering as a bare header (the page felt hollow before). */
-function EmptyState({
-  icon: Icon,
-  title,
-  subtitle,
-  action,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  title: string;
-  subtitle: string;
-  action?: { label: string; onClick: () => void };
-}) {
-  return (
-    <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed bg-card px-6 py-10 text-center">
-      <span className="flex size-12 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
-        <Icon className="size-6" />
-      </span>
-      <p className="font-medium">{title}</p>
-      <p className="max-w-xs text-muted-foreground text-sm">{subtitle}</p>
-      {action && (
-        <Button
-          onClick={action.onClick}
-          variant="secondary"
-          size="sm"
-          className="mt-1 gap-1.5"
-        >
-          <Plus className="size-4" /> {action.label}
-        </Button>
-      )}
-    </div>
-  );
-}
-
 export function ExpenseManager({
   view,
   recap,
@@ -157,6 +120,7 @@ export function ExpenseManager({
   tags: Tag[];
 }) {
   const { summary } = view;
+  const { confirm, confirmDialog } = useConfirm();
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [pending, startTransition] = useTransition();
   const defaultWallet = wallets[0]?.id ?? "";
@@ -338,9 +302,16 @@ export function ExpenseManager({
       }
     });
   }
-  function onDeleteExpense(item: ExpenseItemDTO) {
+  async function onDeleteExpense(item: ExpenseItemDTO) {
     if (!item.movementId) return;
-    if (!confirm("Hapus pengeluaran ini?")) return;
+    if (
+      !(await confirm({
+        title: "Hapus pengeluaran ini?",
+        confirmLabel: "Hapus",
+        destructive: true,
+      }))
+    )
+      return;
     const id = item.movementId;
     startTransition(async () => {
       const result = await deleteExpenseAction(id);
@@ -349,9 +320,15 @@ export function ExpenseManager({
     });
   }
   // Skip a recurring occurrence this cycle (the rule keeps running next cycle).
-  function onSkipOccurrence(item: ExpenseItemDTO) {
+  async function onSkipOccurrence(item: ExpenseItemDTO) {
     if (!item.ruleId) return;
-    if (!confirm("Lewati tagihan ini bulan ini? Aturan rutinnya tetap jalan."))
+    if (
+      !(await confirm({
+        title: "Lewati tagihan ini bulan ini?",
+        description: "Aturan rutinnya tetap jalan bulan depan.",
+        confirmLabel: "Lewati",
+      }))
+    )
       return;
     const { ruleId, effectiveDate } = item;
     startTransition(async () => {
@@ -404,8 +381,15 @@ export function ExpenseManager({
       }
     });
   }
-  function onDeleteCard(card: CardDTO) {
-    if (!confirm(`Hapus kartu "${card.name}"?`)) return;
+  async function onDeleteCard(card: CardDTO) {
+    if (
+      !(await confirm({
+        title: `Hapus kartu "${card.name}"?`,
+        confirmLabel: "Hapus",
+        destructive: true,
+      }))
+    )
+      return;
     startTransition(async () => {
       const result = await deleteCardAction(card.id);
       if (result.ok) {
@@ -446,8 +430,16 @@ export function ExpenseManager({
       }
     });
   }
-  function onEndObligation(rule: RecurringObligationDTO) {
-    if (!confirm("Hentikan tagihan rutin ini? (riwayat tetap aman)")) return;
+  async function onEndObligation(rule: RecurringObligationDTO) {
+    if (
+      !(await confirm({
+        title: "Hentikan tagihan rutin ini?",
+        description: "Riwayat yang sudah ada tetap aman.",
+        confirmLabel: "Hentikan",
+        destructive: true,
+      }))
+    )
+      return;
     startTransition(async () => {
       const result = await endRecurringObligationAction(rule.id);
       if (result.ok) toast.success("Tagihan rutin dihentikan");
@@ -626,7 +618,7 @@ export function ExpenseManager({
                           type="button"
                           onClick={() => onRestoreOccurrence(item)}
                           disabled={pending}
-                          className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                          className="rounded-lg p-3 text-muted-foreground hover:bg-secondary"
                           aria-label="Pulihkan"
                         >
                           <RotateCcw className="size-4" />
@@ -659,7 +651,7 @@ export function ExpenseManager({
                               ? openAdjustOccurrence(item)
                               : openEditExpense(item)
                           }
-                          className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                          className="rounded-lg p-3 text-muted-foreground hover:bg-secondary"
                           aria-label="Ubah"
                         >
                           <Pencil className="size-4" />
@@ -672,7 +664,7 @@ export function ExpenseManager({
                               : onDeleteExpense(item)
                           }
                           disabled={pending}
-                          className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                          className="rounded-lg p-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                           aria-label={item.ruleId ? "Lewati" : "Hapus"}
                         >
                           <Trash2 className="size-4" />
@@ -733,7 +725,7 @@ export function ExpenseManager({
                 <button
                   type="button"
                   onClick={() => openObligation(rule)}
-                  className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                  className="rounded-lg p-3 text-muted-foreground hover:bg-secondary"
                   aria-label="Ubah"
                 >
                   <Pencil className="size-4" />
@@ -742,7 +734,7 @@ export function ExpenseManager({
                   type="button"
                   onClick={() => onEndObligation(rule)}
                   disabled={pending}
-                  className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  className="rounded-lg p-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   aria-label="Hentikan"
                 >
                   <X className="size-4" />
@@ -794,7 +786,7 @@ export function ExpenseManager({
                 <button
                   type="button"
                   onClick={() => openCard(card)}
-                  className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                  className="rounded-lg p-3 text-muted-foreground hover:bg-secondary"
                   aria-label="Ubah"
                 >
                   <Pencil className="size-4" />
@@ -803,7 +795,7 @@ export function ExpenseManager({
                   type="button"
                   onClick={() => onDeleteCard(card)}
                   disabled={pending}
-                  className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  className="rounded-lg p-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   aria-label="Hapus"
                 >
                   <Trash2 className="size-4" />
@@ -1217,6 +1209,8 @@ export function ExpenseManager({
           </form>
         </DialogContent>
       </Dialog>
+
+      {confirmDialog}
     </div>
   );
 }

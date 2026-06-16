@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Banknote,
   CalendarClock,
   Check,
   Pencil,
@@ -12,6 +13,7 @@ import {
 import { type FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -22,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -78,6 +81,7 @@ export function IncomeManager({
   wallets: Wallet[];
   tags: Tag[];
 }) {
+  const { confirm, confirmDialog } = useConfirm();
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -184,8 +188,16 @@ export function IncomeManager({
     });
   }
 
-  function onEndRecurring(rule: RecurringIncomeDTO) {
-    if (!confirm("Hentikan pemasukan rutin ini? (riwayat tetap aman)")) return;
+  async function onEndRecurring(rule: RecurringIncomeDTO) {
+    if (
+      !(await confirm({
+        title: "Hentikan pemasukan rutin ini?",
+        description: "Riwayat yang sudah ada tetap aman.",
+        confirmLabel: "Hentikan",
+        destructive: true,
+      }))
+    )
+      return;
     startTransition(async () => {
       const result = await endRecurringIncomeAction(rule.id);
       if (result.ok) toast.success("Pemasukan rutin dihentikan");
@@ -234,9 +246,16 @@ export function IncomeManager({
       }
     });
   }
-  function onDeleteIncome(item: IncomeItemDTO) {
+  async function onDeleteIncome(item: IncomeItemDTO) {
     if (!item.movementId) return;
-    if (!confirm("Hapus pemasukan ini?")) return;
+    if (
+      !(await confirm({
+        title: "Hapus pemasukan ini?",
+        confirmLabel: "Hapus",
+        destructive: true,
+      }))
+    )
+      return;
     const id = item.movementId;
     startTransition(async () => {
       const result = await deleteIncomeAction(id);
@@ -291,7 +310,7 @@ export function IncomeManager({
               <button
                 type="button"
                 onClick={openPrimary}
-                className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                className="rounded-lg p-3 text-muted-foreground hover:bg-secondary"
                 aria-label="Ubah gaji utama"
               >
                 <Pencil className="size-4" />
@@ -324,7 +343,17 @@ export function IncomeManager({
             <Plus className="size-3.5" /> Tambah rutin
           </button>
         </div>
-        {view.recurringSources.length > 0 && (
+        {view.recurringSources.length === 0 ? (
+          <EmptyState
+            icon={Repeat}
+            title="Belum ada pemasukan rutin lain"
+            subtitle="Misal bonus tetap atau sampingan bulanan — biar muncul otomatis tiap siklus."
+            action={{
+              label: "Tambah rutin",
+              onClick: () => openRecurring(),
+            }}
+          />
+        ) : (
           <ul className="overflow-hidden rounded-3xl border bg-card">
             {view.recurringSources.map((rule) => (
               <li
@@ -346,7 +375,7 @@ export function IncomeManager({
                 <button
                   type="button"
                   onClick={() => openRecurring(rule)}
-                  className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                  className="rounded-lg p-3 text-muted-foreground hover:bg-secondary"
                   aria-label="Ubah"
                 >
                   <Pencil className="size-4" />
@@ -355,7 +384,7 @@ export function IncomeManager({
                   type="button"
                   onClick={() => onEndRecurring(rule)}
                   disabled={pending}
-                  className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  className="rounded-lg p-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   aria-label="Hentikan"
                 >
                   <X className="size-4" />
@@ -371,13 +400,28 @@ export function IncomeManager({
         <h2 className="font-heading text-muted-foreground text-sm">
           Pemasukan siklus ini
         </h2>
-        <ul className="overflow-hidden rounded-3xl border bg-card">
-          {view.items.length === 0 ? (
-            <li className="p-4 text-muted-foreground text-sm">
-              Belum ada pemasukan di siklus ini.
-            </li>
-          ) : (
-            view.items.map((item) => {
+        {view.items.length === 0 ? (
+          <EmptyState
+            icon={Banknote}
+            title={
+              view.cycle.isCurrent
+                ? "Belum ada pemasukan"
+                : "Belum ada pemasukan terjadwal"
+            }
+            subtitle={
+              view.cycle.isCurrent
+                ? "Catat pemasukan pertamamu di siklus ini."
+                : "Pemasukan rutin & rencana bakal muncul di sini otomatis."
+            }
+            action={
+              view.cycle.isCurrent
+                ? { label: "Tambah pemasukan", onClick: openOneOff }
+                : undefined
+            }
+          />
+        ) : (
+          <ul className="overflow-hidden rounded-3xl border bg-card">
+            {view.items.map((item) => {
               const tag = tagOf(item.categoryId);
               return (
                 <li
@@ -423,7 +467,7 @@ export function IncomeManager({
                           <button
                             type="button"
                             onClick={() => openEditIncome(item)}
-                            className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                            className="rounded-lg p-3 text-muted-foreground hover:bg-secondary"
                             aria-label="Ubah"
                           >
                             <Pencil className="size-4" />
@@ -432,7 +476,7 @@ export function IncomeManager({
                             type="button"
                             onClick={() => onDeleteIncome(item)}
                             disabled={pending}
-                            className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            className="rounded-lg p-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                             aria-label="Hapus"
                           >
                             <Trash2 className="size-4" />
@@ -442,9 +486,9 @@ export function IncomeManager({
                   </div>
                 </li>
               );
-            })
-          )}
-        </ul>
+            })}
+          </ul>
+        )}
       </section>
 
       {/* Shared create/edit-recurring dialog (the one-off edit has its own). */}
@@ -638,6 +682,8 @@ export function IncomeManager({
           </form>
         </DialogContent>
       </Dialog>
+
+      {confirmDialog}
     </div>
   );
 }

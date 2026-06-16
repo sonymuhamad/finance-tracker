@@ -1,11 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Tags, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -55,6 +57,7 @@ const TYPE_LABEL: Record<CategoryType, string> = {
 };
 
 export function CategoryManager({ initial }: { initial: CategoryDTO[] }) {
+  const { confirm, confirmDialog } = useConfirm();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryDTO | null>(null);
   const [pending, startTransition] = useTransition();
@@ -112,8 +115,15 @@ export function CategoryManager({ initial }: { initial: CategoryDTO[] }) {
     });
   });
 
-  function onDelete(category: CategoryDTO) {
-    if (!confirm(`Hapus kategori "${category.name}"?`)) return;
+  async function onDelete(category: CategoryDTO) {
+    if (
+      !(await confirm({
+        title: `Hapus kategori "${category.name}"?`,
+        confirmLabel: "Hapus",
+        destructive: true,
+      }))
+    )
+      return;
     startTransition(async () => {
       const result = await deleteCategoryAction(category.id);
       if (result.ok) toast.success("Kategori dihapus");
@@ -139,13 +149,16 @@ export function CategoryManager({ initial }: { initial: CategoryDTO[] }) {
             <h2 className="font-heading text-muted-foreground text-sm">
               {TYPE_LABEL[type]}
             </h2>
-            <ul className="overflow-hidden rounded-3xl border bg-card">
-              {items.length === 0 ? (
-                <li className="p-4 text-muted-foreground text-sm">
-                  Belum ada kategori.
-                </li>
-              ) : (
-                items.map((category) => (
+            {items.length === 0 ? (
+              <EmptyState
+                icon={Tags}
+                title="Belum ada kategori"
+                subtitle={`Tambah kategori ${TYPE_LABEL[type].toLowerCase()} biar transaksi gampang dikelompokin.`}
+                action={{ label: "Tambah kategori", onClick: openCreate }}
+              />
+            ) : (
+              <ul className="overflow-hidden rounded-3xl border bg-card">
+                {items.map((category) => (
                   <li
                     key={category.id}
                     className="flex items-center gap-3 border-b px-4 py-3 last:border-b-0"
@@ -162,7 +175,7 @@ export function CategoryManager({ initial }: { initial: CategoryDTO[] }) {
                     <button
                       type="button"
                       onClick={() => openEdit(category)}
-                      className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                      className="rounded-lg p-3 text-muted-foreground hover:bg-secondary"
                       aria-label="Ubah"
                     >
                       <Pencil className="size-4" />
@@ -171,15 +184,15 @@ export function CategoryManager({ initial }: { initial: CategoryDTO[] }) {
                       type="button"
                       onClick={() => onDelete(category)}
                       disabled={pending}
-                      className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="rounded-lg p-3 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       aria-label="Hapus"
                     >
                       <Trash2 className="size-4" />
                     </button>
                   </li>
-                ))
-              )}
-            </ul>
+                ))}
+              </ul>
+            )}
           </section>
         );
       })}
@@ -264,6 +277,8 @@ export function CategoryManager({ initial }: { initial: CategoryDTO[] }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {confirmDialog}
     </div>
   );
 }
