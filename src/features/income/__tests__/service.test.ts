@@ -9,6 +9,8 @@ vi.mock("@/features/recurring/service");
 vi.mock("@/features/recurring/repository");
 vi.mock("@/features/movements/service");
 vi.mock("@/features/movements/repository");
+// Cross-entity ownership has its own tests (shared/ownership); no-op here.
+vi.mock("@/features/shared/ownership");
 
 import * as movementsRepo from "@/features/movements/repository";
 import * as movements from "@/features/movements/service";

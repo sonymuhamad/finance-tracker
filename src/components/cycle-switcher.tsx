@@ -58,6 +58,11 @@ export function CycleSwitcher({
             </Link>
           </DropdownMenuItem>
         ))}
+        {/* Forward-only by design; signal that past cycles are intentional, not
+            broken (a correct past balance needs opening-balance reconstruction). */}
+        <p className="border-t px-2 pt-1.5 text-[11px] text-muted-foreground">
+          Siklus lalu — segera hadir
+        </p>
       </DropdownMenuContent>
     </DropdownMenu>
   );

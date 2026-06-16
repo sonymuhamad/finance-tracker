@@ -44,6 +44,7 @@ describe("listWallets", () => {
     vi.mocked(repo.createPrimary).mockResolvedValue(walletRow({}));
     vi.mocked(repo.listActive).mockResolvedValue([]);
     vi.mocked(repo.listArchived).mockResolvedValue([]);
+    vi.mocked(movementsRepo.listActualByUser).mockResolvedValue([]);
 
     await service.listWallets("u1");
 
@@ -54,6 +55,7 @@ describe("listWallets", () => {
     vi.mocked(repo.countByUser).mockResolvedValue(2);
     vi.mocked(repo.listActive).mockResolvedValue([]);
     vi.mocked(repo.listArchived).mockResolvedValue([]);
+    vi.mocked(movementsRepo.listActualByUser).mockResolvedValue([]);
 
     await service.listWallets("u1");
 
@@ -67,20 +69,14 @@ describe("listWallets", () => {
       walletRow({ id: "cash", startingBalance: 200_000 }),
     ]);
     vi.mocked(repo.listArchived).mockResolvedValue([]);
-    vi.mocked(movementsRepo.listActualByWallet).mockImplementation(
-      (_userId: string, walletId: string) =>
-        Promise.resolve(
-          walletId === "bca"
-            ? [
-                {
-                  type: MovementType.EXPENSE,
-                  status: MovementStatus.ACTUAL,
-                  amount: 300_000,
-                },
-              ]
-            : [],
-        ) as unknown as ReturnType<typeof movementsRepo.listActualByWallet>,
-    );
+    vi.mocked(movementsRepo.listActualByUser).mockResolvedValue([
+      {
+        type: MovementType.EXPENSE,
+        status: MovementStatus.ACTUAL,
+        amount: 300_000,
+        walletId: "bca",
+      },
+    ] as unknown as Awaited<ReturnType<typeof movementsRepo.listActualByUser>>);
 
     const result = await service.listWallets("u1");
 

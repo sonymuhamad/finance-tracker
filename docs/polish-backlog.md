@@ -6,7 +6,14 @@
 
 ## Open
 
-_(empty — all MVP polish items shipped; see Done below.)_
+_Deferred from the multi-agent review (2026-06-16). Most review findings were fixed
+on branch `fix/review-hardening`; these two were consciously deferred (see
+`docs/pre-launch-hardening.md` for the deploy-time security items)._
+
+| # | Where | Want | Note |
+|---|---|---|---|
+| 9 | Home | **Quick-add expense from Home** (FAB / bottom-sheet) so the most frequent action doesn't bounce to `/expenses`. | A feature (lift the full capture dialog into a shared `<RecordExpenseDialog>`); review marked it P2. Home already links to `/expenses`. |
+| 14 | Capture dialogs (expense / obligation / card / income) | **Inline field-level form errors** (`role="alert"` + `aria-invalid` + focus-to-field) and a **per-row action spinner** (the `pending` flag is shared, so confirming one row disables every action button). | A forms-architecture pass (migrate the hand-rolled FormData forms to react-hook-form + Zod like wallets/categories already are). Today errors surface via toast + native HTML validation; submit shows "Menyimpan…". |
 
 ## Post-MVP (deferred — after v0.1 ships; Sony's call 2026-06-14)
 

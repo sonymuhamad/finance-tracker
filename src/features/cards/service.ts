@@ -1,3 +1,4 @@
+import { assertOwned } from "@/features/shared/ownership";
 import { DomainError, prismaErrorCode } from "@/lib/errors";
 import * as repo from "./repository";
 import type { CreateCardInput, UpdateCardInput } from "./schema";
@@ -12,7 +13,8 @@ export function listCards(userId: string) {
   return repo.listActive(userId);
 }
 
-export function createCard(userId: string, input: CreateCardInput) {
+export async function createCard(userId: string, input: CreateCardInput) {
+  await assertOwned(userId, { walletId: input.payingWalletId });
   return repo.create(userId, input);
 }
 
@@ -21,6 +23,7 @@ export async function updateCard(
   id: string,
   input: UpdateCardInput,
 ) {
+  await assertOwned(userId, { walletId: input.payingWalletId });
   const res = await repo.update(id, userId, input);
   if (res.count === 0) throw new DomainError("Kartu tidak ditemukan.");
 }

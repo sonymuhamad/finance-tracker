@@ -18,6 +18,7 @@ import {
   listActiveRules,
   updateRule,
 } from "@/features/recurring/service";
+import { assertOwned } from "@/features/shared/ownership";
 import {
   MovementStatus,
   MovementType,
@@ -56,6 +57,10 @@ export async function recordExpense(
   now: Date = new Date(),
 ) {
   if (input.method === PaymentMethod.CASH) {
+    await assertOwned(userId, {
+      walletId: input.walletId,
+      categoryId: input.categoryId,
+    });
     const effectiveDate = toCycleDate(input.date);
     // Paid now → ACTUAL (deducts immediately). Marked "belum dibayar / rencana"
     // (paid === false) → PLANNED (polish backlog #6). Also force PLANNED for a
@@ -87,6 +92,7 @@ export async function recordExpense(
   // Credit card / paylater → an obligation paid from the card's wallet on its due date.
   const card = await cardsRepo.findById(input.cardId as string, userId);
   if (!card) throw new DomainError("Kartu tidak ditemukan.");
+  await assertOwned(userId, { categoryId: input.categoryId });
   const dueDate = input.dueDate ?? nextDueDate(card.defaultDueDay, input.date);
   const timing = resolveTiming(input.method, input.date, dueDate);
   return createMovement({
@@ -104,10 +110,15 @@ export async function recordExpense(
   });
 }
 
-export function addRecurringObligation(
+export async function addRecurringObligation(
   userId: string,
   input: RecurringObligationInput,
 ) {
+  await assertOwned(userId, {
+    walletId: input.walletId,
+    cardId: input.cardId,
+    categoryId: input.categoryId,
+  });
   return createRule({
     userId,
     type: MovementType.EXPENSE,
@@ -122,11 +133,16 @@ export function addRecurringObligation(
   });
 }
 
-export function updateRecurringObligation(
+export async function updateRecurringObligation(
   userId: string,
   ruleId: string,
   input: RecurringObligationInput,
 ) {
+  await assertOwned(userId, {
+    walletId: input.walletId,
+    cardId: input.cardId,
+    categoryId: input.categoryId,
+  });
   return updateRule(ruleId, userId, {
     amount: input.amount,
     dayOfMonth: input.dayOfMonth,
@@ -172,6 +188,8 @@ export async function confirmObligation(
     throw new DomainError("Tagihan sudah dibayar atau tidak ditemukan.");
   }
   await assertCycleReached(userId, movement.effectiveDate, now);
+  // A "pay from a different wallet" override must still be a wallet you own.
+  if (input.walletId) await assertOwned(userId, { walletId: input.walletId });
   const res = await confirmMovement(input.movementId, userId, {
     amount: input.amount,
     walletId: input.walletId,
@@ -200,6 +218,7 @@ export async function confirmRecurringObligation(
     effectiveDate,
   );
   if (existing) throw new DomainError("Tagihan rutin ini sudah dibayar.");
+  if (input.walletId) await assertOwned(userId, { walletId: input.walletId });
   return createMovement({
     userId,
     type: MovementType.EXPENSE,

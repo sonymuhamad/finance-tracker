@@ -16,6 +16,7 @@ import {
   listActiveRules,
   updateRule,
 } from "@/features/recurring/service";
+import { assertOwned } from "@/features/shared/ownership";
 import { MovementStatus, MovementType } from "@/generated/prisma/enums";
 import { cycleOf, getCycleByOffset, toCycleDate } from "@/lib/cycle";
 import { DomainError } from "@/lib/errors";
@@ -53,6 +54,10 @@ export async function setPrimaryIncome(
   userId: string,
   input: PrimaryIncomeInput,
 ) {
+  await assertOwned(userId, {
+    walletId: input.walletId,
+    categoryId: input.categoryId,
+  });
   const fields = {
     amount: input.amount,
     dayOfMonth: input.dayOfMonth,
@@ -73,10 +78,14 @@ export async function setPrimaryIncome(
   });
 }
 
-export function addRecurringIncome(
+export async function addRecurringIncome(
   userId: string,
   input: RecurringIncomeInput,
 ) {
+  await assertOwned(userId, {
+    walletId: input.walletId,
+    categoryId: input.categoryId,
+  });
   return createRule({
     userId,
     type: MovementType.INCOME,
@@ -90,11 +99,15 @@ export function addRecurringIncome(
   });
 }
 
-export function updateRecurringIncome(
+export async function updateRecurringIncome(
   userId: string,
   ruleId: string,
   input: RecurringIncomeInput,
 ) {
+  await assertOwned(userId, {
+    walletId: input.walletId,
+    categoryId: input.categoryId,
+  });
   return updateRule(ruleId, userId, {
     amount: input.amount,
     dayOfMonth: input.dayOfMonth,
@@ -109,7 +122,14 @@ export function endRecurringIncome(userId: string, ruleId: string) {
 }
 
 /** One-off income — received now (ACTUAL) or expected later (PLANNED). */
-export function addOneOffIncome(userId: string, input: OneOffIncomeInput) {
+export async function addOneOffIncome(
+  userId: string,
+  input: OneOffIncomeInput,
+) {
+  await assertOwned(userId, {
+    walletId: input.walletId,
+    categoryId: input.categoryId,
+  });
   const now = new Date();
   return createMovement({
     userId,
@@ -196,6 +216,8 @@ export async function confirmIncome(
     throw new DomainError("Pemasukan sudah dikonfirmasi atau tidak ditemukan.");
   }
   await assertCycleReached(userId, movement.effectiveDate, now);
+  // A "receive into a different wallet" override must still be a wallet you own.
+  if (input.walletId) await assertOwned(userId, { walletId: input.walletId });
   const res = await confirmMovement(input.movementId, userId, {
     amount: input.amount,
     walletId: input.walletId,
@@ -233,6 +255,7 @@ export async function confirmRecurringIncome(
   if (existing) {
     throw new DomainError("Pemasukan rutin ini sudah dikonfirmasi.");
   }
+  if (input.walletId) await assertOwned(userId, { walletId: input.walletId });
   return createMovement({
     userId,
     type: MovementType.INCOME,

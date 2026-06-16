@@ -4,6 +4,9 @@ import { CardKind } from "@/generated/prisma/enums";
 import { DomainError } from "@/lib/errors";
 
 vi.mock("../repository");
+// Cross-entity ownership is exercised by its own tests (shared/ownership) — here
+// it's a no-op so these service tests stay focused on card logic.
+vi.mock("@/features/shared/ownership");
 
 import * as repo from "../repository";
 import * as service from "../service";

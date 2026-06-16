@@ -5,8 +5,8 @@ status: Implemented # Draft → Approved → In Progress → Implemented
 prd: # docs/prd/mvp/005-wallets.md, 006-income-and-cycle.md, 007-expenses-and-obligations.md, 008-home-safe-to-spend.md
 author: Engineering
 created: 2026-06-06
-last_updated: 2026-06-06
-last_verified: 2026-06-14 # SKIPPED MovementStatus added (per-occurrence skip, RFC 0008)
+last_updated: 2026-06-16
+last_verified: 2026-06-16 # + cross-entity ownership guard (assertOwned), amount caps, dev-login prod gate (security review hardening)
 ---
 
 # RFC 0005 — Foundation: Movement + Cycle model
@@ -291,6 +291,23 @@ src/features/home/                   # 0009: forecast service + UI (composes eve
 Cross-module composition is **service → other module's repository/service** (one
 direction, never back into actions). Example: `home.service` →
 `movements.repository` + `recurring.service` + `wallets.repository` + `cycle`.
+
+> **Cross-entity ownership (security hardening, 2026-06-16).** Every row is
+> stamped with the caller's `userId`, but when an action accepts a *foreign-key
+> id* from the client (`walletId` / `cardId` / `categoryId`) the DB FK only proves
+> the referenced entity **exists**, not that the caller owns it — so a movement or
+> rule could reference another user's wallet/card/category (cross-tenant IDOR + an
+> integrity break that can trip the Restrict FK on the victim's delete). The
+> shared guard **`features/shared/ownership.ts → assertOwned(userId, {walletId,
+> cardId, categoryId})`** validates each supplied id via the already-scoped repo
+> finders, and runs in every income/expense/cards/recurring create+update and the
+> confirm-with-wallet-override paths *before* the write. Tested in
+> `features/shared/__tests__/ownership.test.ts`. (`categories.findById(id,userId)`
+> was added for this.) Amount/balance Zod fields are also capped at 1e12 (under
+> `Decimal(18,2)` and `Number.MAX_SAFE_INTEGER`) so an oversized value can't
+> overflow the column (a 500) or lose precision. Dev-login is hard-disabled when
+> `NODE_ENV === "production"` regardless of `DEV_LOGIN_ENABLED`. Remaining
+> deploy-time hardening: `docs/pre-launch-hardening.md`.
 
 ### Layer flow — what this RFC builds vs what features compose
 

@@ -9,11 +9,13 @@ import {
   SlidersHorizontal,
   Star,
   Trash2,
+  Wallet,
 } from "lucide-react";
 import { type FormEvent, useState, useTransition } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import {
   Dialog,
@@ -30,6 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -107,6 +110,7 @@ export function WalletManager({
   pooled: number;
   archived: ArchivedWalletDTO[];
 }) {
+  const { confirm, confirmDialog } = useConfirm();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<WalletDTO | null>(null);
   const [adjusting, setAdjusting] = useState<WalletDTO | null>(null);
@@ -197,8 +201,15 @@ export function WalletManager({
     });
   }
 
-  function onDelete(wallet: WalletDTO) {
-    if (!confirm(`Hapus dompet "${wallet.name}"?`)) return;
+  async function onDelete(wallet: WalletDTO) {
+    if (
+      !(await confirm({
+        title: `Hapus dompet "${wallet.name}"?`,
+        confirmLabel: "Hapus",
+        destructive: true,
+      }))
+    )
+      return;
     startTransition(async () => {
       const result = await deleteWalletAction(wallet.id);
       if (result.ok) {
@@ -241,13 +252,16 @@ export function WalletManager({
         </p>
       </div>
 
-      <ul className="overflow-hidden rounded-3xl border bg-card">
-        {initial.length === 0 ? (
-          <li className="p-4 text-muted-foreground text-sm">
-            Belum ada dompet.
-          </li>
-        ) : (
-          initial.map((wallet) => (
+      {initial.length === 0 ? (
+        <EmptyState
+          icon={Wallet}
+          title="Belum ada dompet"
+          subtitle="Tambah dompet (cash, bank, e-wallet) buat mulai nyatet saldo."
+          action={{ label: "Tambah dompet", onClick: openCreate }}
+        />
+      ) : (
+        <ul className="overflow-hidden rounded-3xl border bg-card">
+          {initial.map((wallet) => (
             <li
               key={wallet.id}
               className="flex items-center gap-3 border-b px-4 py-3 last:border-b-0"
@@ -274,7 +288,7 @@ export function WalletManager({
 
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"
+                  className="rounded-lg p-3 text-muted-foreground hover:bg-secondary"
                   aria-label={`Aksi untuk ${wallet.name}`}
                   disabled={pending}
                 >
@@ -311,9 +325,9 @@ export function WalletManager({
                 </DropdownMenuContent>
               </DropdownMenu>
             </li>
-          ))
-        )}
-      </ul>
+          ))}
+        </ul>
+      )}
 
       {archived.length > 0 && (
         <section className="space-y-2">
@@ -512,6 +526,8 @@ export function WalletManager({
           </form>
         </DialogContent>
       </Dialog>
+
+      {confirmDialog}
     </div>
   );
 }
